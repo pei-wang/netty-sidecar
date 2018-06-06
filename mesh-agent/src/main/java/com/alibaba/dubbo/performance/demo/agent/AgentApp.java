@@ -14,7 +14,9 @@ public class AgentApp implements CommandLineRunner {
 
     public static void main(String[] args) {
         SpringApplication springApplication = new SpringApplication(AgentApp.class);
-//        springApplication.setWebEnvironment(false);
+        if ("provider".equals(System.getProperty("type"))) {
+            springApplication.setWebEnvironment(false);
+        }
         springApplication.run(args);
     }
 
