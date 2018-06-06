@@ -58,7 +58,7 @@ public class NettyServer {
                 });
 
         channel = serverBootstrap.bind(port).sync().channel();
-
+        channel.closeFuture().sync();
         LOGGER.info("NettyRPC server listening on port " + port + " and ready for connections...");
     }
 }
