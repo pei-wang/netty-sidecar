@@ -1,11 +1,9 @@
 package com.alibaba.dubbo.performance.demo.agent;
 
-import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.NettyServerListener;
+import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.server.NettyServer;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-import javax.swing.*;
 
 @SpringBootApplication
 public class AgentApp implements CommandLineRunner {
@@ -22,8 +20,8 @@ public class AgentApp implements CommandLineRunner {
 
     @Override
     public void run(String... strings) throws Exception {
-//        if ("provider".equals(System.getProperty("type"))) {
-        new NettyServerListener().start();
-//        }
+        if ("provider".equals(System.getProperty("type"))) {
+            new NettyServer().start();
+        }
     }
 }

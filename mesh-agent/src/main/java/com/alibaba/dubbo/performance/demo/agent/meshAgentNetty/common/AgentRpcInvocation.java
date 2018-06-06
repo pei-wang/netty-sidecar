@@ -1,4 +1,4 @@
-package com.alibaba.dubbo.performance.demo.agent.meshAgentNetty;
+package com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common;
 
 import java.io.Serializable;
 
