@@ -46,7 +46,7 @@ public class DubboRpcDecoder extends ByteToMessageDecoder {
         //list.add(decode2(byteBuf));
     }
 
-    enum DecodeResult {
+    public enum DecodeResult {
         NEED_MORE_INPUT, SKIP_INPUT
     }
 
@@ -68,6 +68,7 @@ public class DubboRpcDecoder extends ByteToMessageDecoder {
         }
 
         byte[] header = new byte[HEADER_LENGTH];
+
         byteBuf.readBytes(header);
         byte[] dataLen = Arrays.copyOfRange(header,12,16);
         int len = Bytes.bytes2int(dataLen);
@@ -87,6 +88,7 @@ public class DubboRpcDecoder extends ByteToMessageDecoder {
 
         // HEADER_LENGTH + 1，忽略header & Response value type的读取，直接读取实际Return value
         // dubbo返回的body中，前后各有一个换行，去掉
+
         byte[] subArray = Arrays.copyOfRange(data,HEADER_LENGTH + 2, data.length -1 );
 
         String s = new String(subArray);
