@@ -28,7 +28,7 @@ public class NettyServer {
 
     int backlog = 1024;
 
-    int port = Integer.parseInt(System.getenv("server.port"));
+    int port = Integer.parseInt(System.getProperty("server.port"));
 
 //    int port = 10080;
     public void start() throws InterruptedException {
