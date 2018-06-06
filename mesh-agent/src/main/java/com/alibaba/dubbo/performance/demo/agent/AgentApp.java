@@ -14,16 +14,16 @@ public class AgentApp implements CommandLineRunner {
 
     public static void main(String[] args) {
         SpringApplication springApplication = new SpringApplication(AgentApp.class);
-        if ("provider".equals(System.getProperty("type"))) {
+//        if ("provider".equals(System.getProperty("type"))) {
             springApplication.setWebEnvironment(false);
-        }
+//        }
         springApplication.run(args);
     }
 
     @Override
     public void run(String... strings) throws Exception {
-        if ("provider".equals(System.getProperty("type"))) {
+//        if ("provider".equals(System.getProperty("type"))) {
             new NettyServer().start();
-        }
+//        }
     }
 }

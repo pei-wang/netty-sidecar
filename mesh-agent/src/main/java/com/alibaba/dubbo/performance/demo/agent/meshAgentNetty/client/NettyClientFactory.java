@@ -10,13 +10,14 @@ import java.util.List;
 import java.util.Random;
 
 public class NettyClientFactory {
-    private static IRegistry registry = new EtcdRegistry(System.getProperty("etcd.url"));
-    private static List<Endpoint> endpoints;
-    private static List<NettyClient> nettyClients = new ArrayList<>();
+    private List<Endpoint> endpoints;
+    private List<NettyClient> nettyClients = new ArrayList<>();
     private static Random random = new Random();
+    private static NettyClientFactory nettyClientFactory;
 
-    static {
+    private NettyClientFactory() {
         try {
+            IRegistry registry = new EtcdRegistry(System.getProperty("etcd.url"));
             endpoints = registry.find("com.alibaba.dubbo.performance.demo.provider.IHelloService");
             for (Endpoint endpoint : endpoints) {
                 NettyClient nettyClient = new NettyClient();
@@ -29,7 +30,10 @@ public class NettyClientFactory {
     }
 
     public static NettyClient get() {
-        return nettyClients.get(random.nextInt(nettyClients.size()));
+        if (nettyClientFactory == null) {
+            nettyClientFactory = new NettyClientFactory();
+        }
+        return nettyClientFactory.nettyClients.get(random.nextInt(nettyClientFactory.nettyClients.size()));
     }
 
 }
