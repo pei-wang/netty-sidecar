@@ -13,7 +13,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<AgentRequest> {
     private RpcClient rpcClient = new RpcClient(registry);
 
     @Override
-    protected void messageReceived(ChannelHandlerContext channelHandlerContext, AgentRequest agentRequest) throws Exception {
+    protected void channelRead0(ChannelHandlerContext channelHandlerContext, AgentRequest agentRequest) throws Exception {
         AgentResponse agentResponse = new AgentResponse();
         agentResponse.setTraceId(agentRequest.getTraceId());
 
@@ -27,5 +27,6 @@ public class ServerHandler extends SimpleChannelInboundHandler<AgentRequest> {
             agentResponse.setError(t);
         }
         channelHandlerContext.writeAndFlush(agentResponse);
+
     }
 }

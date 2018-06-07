@@ -10,12 +10,13 @@ import io.netty.channel.SimpleChannelInboundHandler;
 public class RpcClientHandler extends SimpleChannelInboundHandler<RpcResponse> {
 
     @Override
-    protected void messageReceived(ChannelHandlerContext channelHandlerContext, RpcResponse response) throws Exception {
-        String requestId = response.getRequestId();
+    protected void channelRead0(ChannelHandlerContext channelHandlerContext, RpcResponse rpcResponse) throws Exception {
+        String requestId = rpcResponse.getRequestId();
         RpcFuture future = RpcRequestHolder.get(requestId);
-        if(null != future){
+        if (null != future) {
             RpcRequestHolder.remove(requestId);
-            future.done(response);
+            future.done(rpcResponse);
         }
+
     }
 }

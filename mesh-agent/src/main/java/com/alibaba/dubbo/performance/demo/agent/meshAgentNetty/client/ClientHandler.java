@@ -12,16 +12,6 @@ import java.util.concurrent.*;
 public class ClientHandler extends SimpleChannelInboundHandler<AgentResponse> {
     private final Map<String, BlockingQueue<AgentResponse>> responsesMap = new ConcurrentHashMap<>();
 
-    @Override
-    protected void messageReceived(ChannelHandlerContext channelHandlerContext, AgentResponse agentResponse) throws Exception {
-        BlockingQueue<AgentResponse> queue = responsesMap.get(agentResponse.getTraceId());
-        if (queue == null) {
-            queue = new LinkedBlockingDeque<>(1);
-            responsesMap.putIfAbsent(agentResponse.getTraceId(), queue);
-        }
-        queue.add(agentResponse);
-    }
-
     public AgentResponse send(AgentRequest request, Pair<Long, TimeUnit> timeout) throws InterruptedException {
         responsesMap.putIfAbsent(request.getTraceId(), new LinkedBlockingQueue<AgentResponse>(1));
         AgentResponse response = null;
@@ -43,5 +33,16 @@ public class ClientHandler extends SimpleChannelInboundHandler<AgentResponse> {
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         super.exceptionCaught(ctx, cause);
         cause.printStackTrace();
+    }
+
+    @Override
+    protected void channelRead0(ChannelHandlerContext channelHandlerContext, AgentResponse agentResponse) throws Exception {
+        BlockingQueue<AgentResponse> queue = responsesMap.get(agentResponse.getTraceId());
+        if (queue == null) {
+            queue = new LinkedBlockingDeque<>(1);
+            responsesMap.putIfAbsent(agentResponse.getTraceId(), queue);
+        }
+        queue.add(agentResponse);
+
     }
 }
