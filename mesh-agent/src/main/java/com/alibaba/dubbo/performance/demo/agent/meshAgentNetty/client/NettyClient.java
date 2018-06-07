@@ -1,5 +1,6 @@
 package com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.client;
 
+import com.alibaba.dubbo.performance.demo.agent.AgentClientFuture;
 import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentDecoder;
 import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentEncoder;
 import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentRequest;
@@ -18,7 +19,9 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.PreDestroy;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class NettyClient {
 
@@ -28,9 +31,8 @@ public class NettyClient {
     private Bootstrap bootstrap;
     private Channel channel;
     private volatile boolean closed = false;
-
     int workerGroupThreads = 5;
-    private ClientHandler clientHandler = new ClientHandler();;
+    private ClientHandler clientHandler = new ClientHandler();
 
     public void connect(final InetSocketAddress socketAddress) {
         try{
@@ -98,17 +100,6 @@ public class NettyClient {
                 .channel();
     }
 
-    public AgentResponse syncSend(AgentRequest request) throws InterruptedException {
-        System.out.println("send request:"+request);
-        channel.writeAndFlush(request).sync();
-        return clientHandler.send(request,null);
-    }
-
-    public AgentResponse asyncSend(AgentRequest request,Pair<Long,TimeUnit> timeout) throws InterruptedException {
-        channel.writeAndFlush(request);
-        return clientHandler.send(request,timeout);
-    }
-
     public InetSocketAddress getRemoteAddress() {
         SocketAddress remoteAddress = channel.remoteAddress();
         if (!(remoteAddress instanceof InetSocketAddress)) {
@@ -132,5 +123,23 @@ public class NettyClient {
         channel.closeFuture().syncUninterruptibly();
         workerGroup = null;
         channel = null;
+    }
+
+    public AgentResponse sendData(AgentRequest agentRequest) {
+        AgentClientFuture agentClientFuture = new AgentClientFuture();
+        AgentClientRequestHolder.put(String.valueOf(agentRequest.getTraceId()), agentClientFuture);
+        channel.writeAndFlush(agentRequest);
+        AgentResponse result = null;
+        try {
+            result = agentClientFuture.get(5000L, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        } catch (TimeoutException e) {
+            e.printStackTrace();
+            logger.info("{} request timeout", agentRequest.getTraceId());
+        }
+        return result;
     }
 }

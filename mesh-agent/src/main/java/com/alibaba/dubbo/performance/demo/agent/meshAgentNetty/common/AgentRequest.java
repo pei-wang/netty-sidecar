@@ -1,18 +1,18 @@
 package com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 public class AgentRequest {
-    private String traceId;
+    private static AtomicLong atomicLong = new AtomicLong();
+    private long id;
     private AgentRpcInvocation agentRpcInvocation;
 
     public AgentRequest() {
+        id = atomicLong.getAndIncrement();
     }
 
-    public String getTraceId() {
-        return traceId;
-    }
-
-    public void setTraceId(String traceId) {
-        this.traceId = traceId;
+    public long getTraceId() {
+        return id;
     }
 
     public AgentRpcInvocation getAgentRpcInvocation() {

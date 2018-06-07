@@ -1,17 +1,15 @@
 package com.alibaba.dubbo.performance.demo.agent;
 
+import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.client.NettyClient;
 import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.client.NettyClientFactory;
 import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentRequest;
+import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentResponse;
 import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentRpcInvocation;
-import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 @RestController
 public class HelloController {
@@ -37,15 +35,18 @@ public class HelloController {
 
     public Integer consumer(String interfaceName, String method, String parameterTypesString, String parameter) throws Exception {
         logger.info("access consumer....");
+        long startTime = System.currentTimeMillis();
         AgentRequest agentRequest = new AgentRequest();
         AgentRpcInvocation agentRpcInvocation = new AgentRpcInvocation();
         agentRpcInvocation.setInterfaceName(interfaceName);
         agentRpcInvocation.setMethod(method);
         agentRpcInvocation.setPrameter(parameter);
         agentRpcInvocation.setPrameterTypesString(parameterTypesString);
-        agentRequest.setTraceId(UUID.randomUUID().toString());
         agentRequest.setAgentRpcInvocation(agentRpcInvocation);
-        return Integer.parseInt(new String((byte[]) NettyClientFactory.get().asyncSend(agentRequest, Pair.of(2000L, TimeUnit.MILLISECONDS)).getResult()));
-
+        NettyClient nettyClient = NettyClientFactory.get();
+        logger.info("Use nettyClient:"+nettyClient.getRemoteAddress());
+        AgentResponse agentResponse = nettyClient.sendData(agentRequest);
+        logger.info("The time spent on consumer not include on the waiting time: {} ms", System.currentTimeMillis() - startTime);
+        return Integer.parseInt(new String((byte[]) agentResponse.getResult()));
     }
 }

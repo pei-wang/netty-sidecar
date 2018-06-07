@@ -12,7 +12,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<AgentRequest> {
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, AgentRequest agentRequest) throws Exception {
         AgentResponse agentResponse = new AgentResponse();
-        agentResponse.setTraceId(agentRequest.getTraceId());
+        agentResponse.setTraceId(String.valueOf(agentRequest.getTraceId()));
 
         try{
             Object result = rpcClient.invoke(agentRequest.getAgentRpcInvocation().getInterfaceName(),
