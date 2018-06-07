@@ -36,7 +36,7 @@ public class HelloController {
 
 
     public Integer consumer(String interfaceName, String method, String parameterTypesString, String parameter) throws Exception {
-
+        logger.info("access consumer....");
         AgentRequest agentRequest = new AgentRequest();
         AgentRpcInvocation agentRpcInvocation = new AgentRpcInvocation();
         agentRpcInvocation.setInterfaceName(interfaceName);
