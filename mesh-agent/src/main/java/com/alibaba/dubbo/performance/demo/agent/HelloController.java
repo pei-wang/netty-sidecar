@@ -1,7 +1,6 @@
 package com.alibaba.dubbo.performance.demo.agent;
 
 import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.client.NettyClient;
-import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.client.NettyClientFactory;
 import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentRequest;
 import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentResponse;
 import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentRpcInvocation;
@@ -15,8 +14,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class HelloController {
 
     private Logger logger = LoggerFactory.getLogger(HelloController.class);
+    private NettyClient nettyClient;
 
     public HelloController() throws Exception {
+        String type = System.getProperty("type");
+        if ("consumer".equals(type)) {
+            nettyClient = new NettyClient();
+        }
     }
 
     @RequestMapping(value = "")
@@ -43,8 +47,6 @@ public class HelloController {
         agentRpcInvocation.setPrameter(parameter);
         agentRpcInvocation.setPrameterTypesString(parameterTypesString);
         agentRequest.setAgentRpcInvocation(agentRpcInvocation);
-        NettyClient nettyClient = NettyClientFactory.get();
-        logger.info("Use nettyClient:"+nettyClient.getRemoteAddress());
         AgentResponse agentResponse = nettyClient.sendData(agentRequest);
         logger.info("The time spent on consumer not include on the waiting time: {} ms", System.currentTimeMillis() - startTime);
         return Integer.parseInt(new String((byte[]) agentResponse.getResult()));

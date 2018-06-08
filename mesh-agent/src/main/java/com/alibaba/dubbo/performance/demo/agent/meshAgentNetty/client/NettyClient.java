@@ -1,144 +1,91 @@
 package com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.client;
 
 import com.alibaba.dubbo.performance.demo.agent.AgentClientFuture;
-import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentDecoder;
-import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentEncoder;
 import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentRequest;
 import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentResponse;
+import com.alibaba.dubbo.performance.demo.agent.registry.Endpoint;
+import com.alibaba.dubbo.performance.demo.agent.registry.EtcdRegistry;
+import com.alibaba.dubbo.performance.demo.agent.registry.IRegistry;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.pool.AbstractChannelPoolMap;
+import io.netty.channel.pool.ChannelPoolMap;
+import io.netty.channel.pool.FixedChannelPool;
+import io.netty.channel.pool.SimpleChannelPool;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-import io.netty.handler.codec.LengthFieldPrepender;
-import org.apache.commons.lang3.tuple.Pair;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.PreDestroy;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 public class NettyClient {
-
-    private static final Logger logger = LoggerFactory.getLogger(NettyClient.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(NettyClient.class);
+    private List<Endpoint> endpoints;
 
     private EventLoopGroup workerGroup;
     private Bootstrap bootstrap;
-    private Channel channel;
-    private volatile boolean closed = false;
     int workerGroupThreads = 5;
-    private ClientHandler clientHandler = new ClientHandler();
+    ChannelPoolMap<InetSocketAddress, SimpleChannelPool> poolMap;
+    List<SimpleChannelPool> channelPools = new ArrayList<>();
+    private Random random = new Random();
 
-    public void connect(final InetSocketAddress socketAddress) {
-        try{
-            workerGroup = new NioEventLoopGroup(workerGroupThreads);
-            bootstrap = new Bootstrap();
-            bootstrap.group(workerGroup)
-                    .channel(NioSocketChannel.class)
-                    .option(ChannelOption.SO_KEEPALIVE, true)
-                    .option(ChannelOption.TCP_NODELAY, true)
-                    .handler(new ChannelInitializer<SocketChannel>() {
-                        @Override
-                        protected void initChannel(SocketChannel ch) throws Exception {
-                            ch.pipeline()
-                                    //处理失败重连
-                                    .addFirst(new ChannelInboundHandlerAdapter() {
-                                        @Override
-                                        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-                                            super.channelInactive(ctx);
-                                            ctx.channel().eventLoop().schedule(new Runnable() {
-                                                @Override
-                                                public void run() {
-                                                    doConnect(socketAddress);
-                                                }
-                                            },1, TimeUnit.SECONDS);
-                                        }
-                                    })
-                                    //处理分包传输问题
-                                    .addLast("decoder", new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4))
-                                    .addLast("encoder", new LengthFieldPrepender(4, false))
-                                    .addLast(new AgentDecoder(AgentResponse.class))
-                                    .addLast(new AgentEncoder(AgentRequest.class))
-                                    .addLast(clientHandler);
-                        }
-                    });
-            doConnect(socketAddress);
-        }catch (Exception e){
-            logger.error(e.getMessage(), e);
+    public NettyClient() throws Exception {
+        build();
+        IRegistry registry = new EtcdRegistry(System.getProperty("etcd.url"));
+        endpoints = registry.find("com.alibaba.dubbo.performance.demo.provider.IHelloService");
+        for (Endpoint endpoint : endpoints) {
+            LOGGER.info("trying to connect endpoint{}:{}", endpoint.getHost(), endpoint.getPort());
+            channelPools.add(poolMap.get(new InetSocketAddress(endpoint.getHost(), endpoint.getPort())));
+            LOGGER.info("connected to endpoint:{}:{}", endpoint.getHost(), endpoint.getPort());
         }
     }
 
-    private void doConnect(final InetSocketAddress socketAddress) {
-        logger.info("trying to connect server:{}",socketAddress);
-        if (closed) {
-            return;
-        }
-
-        ChannelFuture future = bootstrap.connect(socketAddress);
-        future.addListener(new ChannelFutureListener() {
-            public void operationComplete(ChannelFuture f) throws Exception {
-                if (f.isSuccess()) {
-                    logger.info("connected to {}", socketAddress);
-                } else {
-                    logger.info("connected to {} failed",socketAddress);
-                    f.channel().eventLoop().schedule(new Runnable() {
-                        @Override
-                        public void run() {
-                            doConnect(socketAddress);
-                        }
-                    }, 1, TimeUnit.SECONDS);
-                }
+    public void build() {
+        workerGroup = new NioEventLoopGroup(workerGroupThreads);
+        bootstrap = new Bootstrap();
+        bootstrap.group(workerGroup)
+                .channel(NioSocketChannel.class)
+                .option(ChannelOption.SO_KEEPALIVE, true)
+                .option(ChannelOption.TCP_NODELAY, true);
+        poolMap = new AbstractChannelPoolMap<InetSocketAddress, SimpleChannelPool>() {
+            @Override
+            protected SimpleChannelPool newPool(InetSocketAddress key) {
+                return new FixedChannelPool(bootstrap.remoteAddress(key), new NettyChannelPoolHandler(), 8);
             }
-        });
-
-        channel = future.syncUninterruptibly()
-                .channel();
-    }
-
-    public InetSocketAddress getRemoteAddress() {
-        SocketAddress remoteAddress = channel.remoteAddress();
-        if (!(remoteAddress instanceof InetSocketAddress)) {
-            throw new RuntimeException("Get remote address error, should be InetSocketAddress");
-        }
-        return (InetSocketAddress) remoteAddress;
-    }
-
-    public boolean isClosed() {
-        return closed;
-    }
-
-    @PreDestroy
-    public void close() {
-        logger.info("destroy client resources");
-        if (null == channel) {
-            logger.error("channel is null");
-        }
-        closed = true;
-        workerGroup.shutdownGracefully();
-        channel.closeFuture().syncUninterruptibly();
-        workerGroup = null;
-        channel = null;
+        };
     }
 
     public AgentResponse sendData(AgentRequest agentRequest) {
         AgentClientFuture agentClientFuture = new AgentClientFuture();
         AgentClientRequestHolder.put(String.valueOf(agentRequest.getTraceId()), agentClientFuture);
-        channel.writeAndFlush(agentRequest);
+        SimpleChannelPool pool = channelPools.get(random.nextInt(channelPools.size()));
+        Future<Channel> f = pool.acquire();
+        f.addListener((FutureListener<Channel>) f1 -> {
+            if (f1.isSuccess()) {
+                Channel ch = f1.getNow();
+                ch.writeAndFlush(agentRequest);
+                pool.release(ch);
+            }
+        });
         AgentResponse result = null;
         try {
             result = agentClientFuture.get(5000L, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (ExecutionException e) {
+        } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
         } catch (TimeoutException e) {
             e.printStackTrace();
-            logger.info("{} request timeout", agentRequest.getTraceId());
+            LOGGER.info("{} request timeout", agentRequest.getTraceId());
         }
         return result;
     }
