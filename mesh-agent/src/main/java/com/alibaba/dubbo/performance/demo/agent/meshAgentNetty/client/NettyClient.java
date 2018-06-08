@@ -70,6 +70,7 @@ public class NettyClient {
         AgentClientFuture agentClientFuture = new AgentClientFuture();
         AgentClientRequestHolder.put(String.valueOf(agentRequest.getTraceId()), agentClientFuture);
         SimpleChannelPool pool = channelPools.get(random.nextInt(channelPools.size()));
+        LOGGER.info("poolUsed:" + pool);
         Future<Channel> f = pool.acquire();
         f.addListener((FutureListener<Channel>) f1 -> {
             if (f1.isSuccess()) {
