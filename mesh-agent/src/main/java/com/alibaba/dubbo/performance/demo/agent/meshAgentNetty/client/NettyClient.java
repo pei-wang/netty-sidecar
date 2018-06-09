@@ -35,7 +35,7 @@ public class NettyClient {
     private List<Endpoint> endpoints;
     private EventLoopGroup workerGroup;
     private Bootstrap bootstrap;
-    int workerGroupThreads = 30;
+    int workerGroupThreads = 20;
     private AtomicInteger pos = new AtomicInteger();
     ChannelPoolMap<InetSocketAddress, SimpleChannelPool> poolMap;
     List<SimpleChannelPool> channelPools = new ArrayList<>();
