@@ -31,11 +31,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class NettyClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyClient.class);
-    public static final int MAX_CONNECTIONS = 20;
+    public static final int MAX_CONNECTIONS = 5;
     private List<Endpoint> endpoints;
     private EventLoopGroup workerGroup;
     private Bootstrap bootstrap;
-    int workerGroupThreads = 20;
+    int workerGroupThreads = 15;
     private AtomicInteger pos = new AtomicInteger();
     ChannelPoolMap<InetSocketAddress, SimpleChannelPool> poolMap;
     List<SimpleChannelPool> channelPools = new ArrayList<>();
