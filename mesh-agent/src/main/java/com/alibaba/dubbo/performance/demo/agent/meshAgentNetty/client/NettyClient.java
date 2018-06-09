@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class NettyClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyClient.class);
-    public static final int MAX_CONNECTIONS = 8;
+    public static final int MAX_CONNECTIONS = 20;
     private List<Endpoint> endpoints;
     private EventLoopGroup workerGroup;
     private Bootstrap bootstrap;
@@ -92,6 +92,7 @@ public class NettyClient {
                 LOGGER.info("Request-traceId:{} The time get channel{}: {} ms", agentRequest.getTraceId(), ch.id(), System.currentTimeMillis() - startTime);
                 ch.writeAndFlush(agentRequest);
                 LOGGER.info("Request-traceId:{} The time write data out: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
+                LOGGER.info("Request-traceId:{} The time write data out: {} ", agentRequest.getTraceId(), System.currentTimeMillis());
                 pool.release(ch);
             }
         });

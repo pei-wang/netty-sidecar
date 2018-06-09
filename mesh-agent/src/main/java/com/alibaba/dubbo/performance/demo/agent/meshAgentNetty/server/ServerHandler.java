@@ -14,7 +14,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<AgentRequest> {
 
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, AgentRequest agentRequest) throws Exception {
-
+        LOGGER.info("Request-traceId:{} The time in serverHandler in:{}", agentRequest.getTraceId(), System.currentTimeMillis());
         long startTime = System.currentTimeMillis();
         AgentResponse agentResponse = new AgentResponse();
         agentResponse.setTraceId(String.valueOf(agentRequest.getTraceId()));
@@ -31,6 +31,6 @@ public class ServerHandler extends SimpleChannelInboundHandler<AgentRequest> {
         LOGGER.info("Request-traceId:{} The time get result form dubbo: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
         channelHandlerContext.writeAndFlush(agentResponse);
         LOGGER.info("Request-traceId:{} The time get result form dubbo and Sent out: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
-        LOGGER.info("Request-traceId:{} The time in serverHandler:{}", agentRequest.getTraceId(), System.currentTimeMillis());
+        LOGGER.info("Request-traceId:{} The time in serverHandler out:{}", agentRequest.getTraceId(), System.currentTimeMillis());
     }
 }
