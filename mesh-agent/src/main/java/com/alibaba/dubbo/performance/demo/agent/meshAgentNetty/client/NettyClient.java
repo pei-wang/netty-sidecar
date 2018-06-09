@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -32,10 +31,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class NettyClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyClient.class);
+    public static final int MAX_CONNECTIONS = 30;
     private List<Endpoint> endpoints;
     private EventLoopGroup workerGroup;
     private Bootstrap bootstrap;
-    int workerGroupThreads = 100;
+    int workerGroupThreads = 50;
     private AtomicInteger pos = new AtomicInteger();
     ChannelPoolMap<InetSocketAddress, SimpleChannelPool> poolMap;
     List<SimpleChannelPool> channelPools = new ArrayList<>();
@@ -49,6 +49,18 @@ public class NettyClient {
             channelPools.add(poolMap.get(new InetSocketAddress(endpoint.getHost(), endpoint.getPort())));
             LOGGER.info("connected to endpoint:{}:{}", endpoint.getHost(), endpoint.getPort());
         }
+        for (SimpleChannelPool channelPool : channelPools) {
+            for (int i = 0; i < MAX_CONNECTIONS; i++) {
+                Future<Channel> f = channelPool.acquire();
+                f.addListener((FutureListener<Channel>) f1 -> {
+                    if (f1.isSuccess()) {
+                        Channel ch = f1.getNow();
+                        LOGGER.info("init channel:{}", ch.id());
+                        channelPool.release(ch);
+                    }
+                });
+            }
+        }
     }
 
     public void build() {
@@ -61,7 +73,7 @@ public class NettyClient {
         poolMap = new AbstractChannelPoolMap<InetSocketAddress, SimpleChannelPool>() {
             @Override
             protected SimpleChannelPool newPool(InetSocketAddress key) {
-                return new FixedChannelPool(bootstrap.remoteAddress(key), new NettyChannelPoolHandler(), 50);
+                return new FixedChannelPool(bootstrap.remoteAddress(key), new NettyChannelPoolHandler(), MAX_CONNECTIONS);
             }
         };
     }
