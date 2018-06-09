@@ -33,13 +33,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class NettyClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyClient.class);
     private List<Endpoint> endpoints;
-
     private EventLoopGroup workerGroup;
     private Bootstrap bootstrap;
-    int workerGroupThreads = 10;
+    int workerGroupThreads = 20;
     private AtomicInteger pos = new AtomicInteger();
     ChannelPoolMap<InetSocketAddress, SimpleChannelPool> poolMap;
     List<SimpleChannelPool> channelPools = new ArrayList<>();
+
     public NettyClient() throws Exception {
         build();
         IRegistry registry = new EtcdRegistry(System.getProperty("etcd.url"));
@@ -67,14 +67,16 @@ public class NettyClient {
     }
 
     public AgentResponse sendData(AgentRequest agentRequest) {
+        long startTime = System.currentTimeMillis();
         AgentClientFuture agentClientFuture = new AgentClientFuture();
         AgentClientRequestHolder.put(String.valueOf(agentRequest.getTraceId()), agentClientFuture);
         SimpleChannelPool pool = channelPools.get(pos.getAndIncrement() % channelPools.size());
-        LOGGER.info("poolUsed:" + pool);
+        LOGGER.info("Request-traceId:{} poolUsed:{}", agentRequest.getTraceId(), pool);
         Future<Channel> f = pool.acquire();
         f.addListener((FutureListener<Channel>) f1 -> {
             if (f1.isSuccess()) {
                 Channel ch = f1.getNow();
+                LOGGER.info("Request-traceId:{} The time get channel: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
                 ch.writeAndFlush(agentRequest);
                 pool.release(ch);
             }
@@ -88,6 +90,7 @@ public class NettyClient {
             e.printStackTrace();
             LOGGER.info("{} request timeout", agentRequest.getTraceId());
         }
+        LOGGER.info("Request-traceId:{} The time get result: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
         return result;
     }
 }

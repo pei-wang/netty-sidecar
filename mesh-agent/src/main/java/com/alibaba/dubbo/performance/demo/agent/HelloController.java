@@ -49,6 +49,7 @@ public class HelloController {
         agentRequest.setAgentRpcInvocation(agentRpcInvocation);
         AgentResponse agentResponse = nettyClient.sendData(agentRequest);
         logger.info("The time spent on consumer not include on the waiting time: {} ms", System.currentTimeMillis() - startTime);
-        return Integer.parseInt(new String((byte[]) agentResponse.getResult()));
+        int result = Integer.parseInt(new String((byte[]) agentResponse.getResult()));
+        return result;
     }
 }
