@@ -41,13 +41,14 @@ public class RpcClient {
         request.setData(invocation);
 
         logger.info("requestId=" + request.getId());
-
+        long startTime = System.currentTimeMillis();
         RpcFuture future = new RpcFuture();
         RpcRequestHolder.put(String.valueOf(request.getId()), future);
         Future<Channel> f = pool.acquire();
         f.addListener((FutureListener<Channel>) f1 -> {
             if (f1.isSuccess()) {
                 Channel ch = f1.getNow();
+                logger.info("Request-traceId:{} The time get channel{}: {} ms", request.getId(), ch.id(), System.currentTimeMillis() - startTime);
                 ch.writeAndFlush(request);
                 pool.release(ch);
             }
