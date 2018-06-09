@@ -12,6 +12,9 @@ public class ServerHandler extends SimpleChannelInboundHandler<AgentRequest> {
     private RpcClient rpcClient = new RpcClient();
     private final static Logger LOGGER = LoggerFactory.getLogger(ServerHandler.class);
 
+    public ServerHandler() throws Exception {
+    }
+
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, AgentRequest agentRequest) throws Exception {
         LOGGER.info("Request-traceId:{} The time in serverHandler in:{}", agentRequest.getTraceId(), System.currentTimeMillis());
@@ -34,3 +37,4 @@ public class ServerHandler extends SimpleChannelInboundHandler<AgentRequest> {
         LOGGER.info("Request-traceId:{} The time in serverHandler out:{}", agentRequest.getTraceId(), System.currentTimeMillis());
     }
 }
+
