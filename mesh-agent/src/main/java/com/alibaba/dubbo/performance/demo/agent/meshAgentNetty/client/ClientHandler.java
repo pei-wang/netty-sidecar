@@ -20,7 +20,7 @@ public class ClientHandler extends SimpleChannelInboundHandler<AgentResponse> {
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, AgentResponse agentResponse) throws Exception {
         AgentClientFuture future = AgentClientRequestHolder.get(agentResponse.getTraceId());
-        LOGGER.info("Request-traceId:{} The time Netty clientHandler:{}", agentResponse.getTraceId(), System.currentTimeMillis());
+        LOGGER.info("Request-traceId:{} The time in clientHandler:{}", agentResponse.getTraceId(), System.currentTimeMillis());
         if (future != null) {
             AgentClientRequestHolder.remove(agentResponse.getTraceId());
             future.done(agentResponse);

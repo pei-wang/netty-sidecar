@@ -31,6 +31,6 @@ public class ServerHandler extends SimpleChannelInboundHandler<AgentRequest> {
         LOGGER.info("Request-traceId:{} The time get result form dubbo: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
         channelHandlerContext.writeAndFlush(agentResponse);
         LOGGER.info("Request-traceId:{} The time get result form dubbo and Sent out: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
-
+        LOGGER.info("Request-traceId:{} The time in serverHandler:{}", agentRequest.getTraceId(), System.currentTimeMillis());
     }
 }

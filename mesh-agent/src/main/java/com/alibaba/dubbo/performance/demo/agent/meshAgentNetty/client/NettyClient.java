@@ -106,7 +106,7 @@ public class NettyClient {
             LOGGER.info("{} request timeout", agentRequest.getTraceId());
         }
         LOGGER.info("Request-traceId:{} The time get result: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
-        LOGGER.info("Request-traceId:{} The time finished: {} ms", agentRequest.getTraceId(), System.currentTimeMillis());
+        LOGGER.info("Request-traceId:{} The time finished: {} ", agentRequest.getTraceId(), System.currentTimeMillis());
         return result;
     }
 }
