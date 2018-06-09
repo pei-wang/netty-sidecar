@@ -96,6 +96,7 @@ public class NettyClient {
             }
         });
         AgentResponse result = null;
+        LOGGER.info("Request-traceId:{} The time before future get: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
         try {
             result = agentClientFuture.get(5000L, TimeUnit.MILLISECONDS);
         } catch (InterruptedException | ExecutionException e) {
