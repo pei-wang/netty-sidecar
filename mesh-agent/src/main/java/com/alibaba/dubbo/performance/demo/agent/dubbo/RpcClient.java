@@ -16,14 +16,13 @@ public class RpcClient {
     private Logger logger = LoggerFactory.getLogger(RpcClient.class);
 
     private ConnecManager connectManager;
-
-    public RpcClient() {
+    private SimpleChannelPool pool;
+    public RpcClient() throws Exception {
         this.connectManager = new ConnecManager();
+        pool = connectManager.getChannel();
     }
 
     public Object invoke(String interfaceName, String method, String parameterTypesString, String parameter) throws Exception {
-
-        SimpleChannelPool pool = connectManager.getChannel();
 
         RpcInvocation invocation = new RpcInvocation();
         invocation.setMethodName(method);
