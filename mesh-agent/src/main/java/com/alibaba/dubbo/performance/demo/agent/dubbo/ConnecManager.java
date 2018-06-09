@@ -24,7 +24,7 @@ public class ConnecManager {
         int port = Integer.valueOf(System.getProperty("dubbo.protocol.port"));
         InetSocketAddress key = new InetSocketAddress("127.0.0.1", port);
         simpleChannelPool = new FixedChannelPool(bootstrap.remoteAddress(key), new RpcChannelPoolHandler(), 4);
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 2; i++) {
             Future<Channel> f = simpleChannelPool.acquire();
             f.addListener((FutureListener<Channel>) f1 -> {
                 if (f1.isSuccess()) {

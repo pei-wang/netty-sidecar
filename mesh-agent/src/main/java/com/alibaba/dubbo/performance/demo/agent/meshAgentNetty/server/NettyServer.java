@@ -24,7 +24,7 @@ public class NettyServer {
     private Channel channel;
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
-    final EventExecutorGroup group = new DefaultEventExecutorGroup(16);
+    final EventExecutorGroup group = new DefaultEventExecutorGroup(100);
     int ioThreadNum = 15;
     //内核为此套接口排队的最大连接个数，对于给定的监听套接口，内核要维护两个队列，未链接队列和已连接队列大小总和最大值
 
