@@ -35,7 +35,7 @@ public class NettyClient {
     private List<Endpoint> endpoints;
     private EventLoopGroup workerGroup;
     private Bootstrap bootstrap;
-    int workerGroupThreads = 20;
+    int workerGroupThreads = 100;
     private AtomicInteger pos = new AtomicInteger();
     ChannelPoolMap<InetSocketAddress, SimpleChannelPool> poolMap;
     List<SimpleChannelPool> channelPools = new ArrayList<>();
@@ -61,7 +61,7 @@ public class NettyClient {
         poolMap = new AbstractChannelPoolMap<InetSocketAddress, SimpleChannelPool>() {
             @Override
             protected SimpleChannelPool newPool(InetSocketAddress key) {
-                return new FixedChannelPool(bootstrap.remoteAddress(key), new NettyChannelPoolHandler(), 8);
+                return new FixedChannelPool(bootstrap.remoteAddress(key), new NettyChannelPoolHandler(), 50);
             }
         };
     }
@@ -76,7 +76,7 @@ public class NettyClient {
         f.addListener((FutureListener<Channel>) f1 -> {
             if (f1.isSuccess()) {
                 Channel ch = f1.getNow();
-                LOGGER.info("Request-traceId:{} The time get channel: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
+                LOGGER.info("Request-traceId:{} The time get channel{}: {} ms", agentRequest.getTraceId(), ch.id(), System.currentTimeMillis() - startTime);
                 ch.writeAndFlush(agentRequest);
                 pool.release(ch);
             }

@@ -34,7 +34,7 @@ public class NettyServer {
     public void start() throws InterruptedException {
         LOGGER.info("begin to start rpc server");
         bossGroup = new NioEventLoopGroup();
-        workerGroup = new NioEventLoopGroup(ioThreadNum);
+        workerGroup = new NioEventLoopGroup();
 
         ServerBootstrap serverBootstrap = new ServerBootstrap();
         serverBootstrap.group(bossGroup, workerGroup)
@@ -62,3 +62,4 @@ public class NettyServer {
         LOGGER.info("NettyRPC server listening on port " + port + " and ready for connections...");
     }
 }
+
