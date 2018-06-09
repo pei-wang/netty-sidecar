@@ -23,7 +23,7 @@ public class NettyServer {
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
 
-    int ioThreadNum = 20;
+    int ioThreadNum = 30;
     //内核为此套接口排队的最大连接个数，对于给定的监听套接口，内核要维护两个队列，未链接队列和已连接队列大小总和最大值
 
     int backlog = 1024;
@@ -34,7 +34,7 @@ public class NettyServer {
     public void start() throws InterruptedException {
         LOGGER.info("begin to start rpc server");
         bossGroup = new NioEventLoopGroup();
-        workerGroup = new NioEventLoopGroup();
+        workerGroup = new NioEventLoopGroup(ioThreadNum);
 
         ServerBootstrap serverBootstrap = new ServerBootstrap();
         serverBootstrap.group(bossGroup, workerGroup)

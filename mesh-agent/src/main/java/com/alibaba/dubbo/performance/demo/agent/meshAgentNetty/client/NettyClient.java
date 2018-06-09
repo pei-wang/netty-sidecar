@@ -35,7 +35,7 @@ public class NettyClient {
     private List<Endpoint> endpoints;
     private EventLoopGroup workerGroup;
     private Bootstrap bootstrap;
-    int workerGroupThreads = 100;
+    int workerGroupThreads = 30;
     private AtomicInteger pos = new AtomicInteger();
     ChannelPoolMap<InetSocketAddress, SimpleChannelPool> poolMap;
     List<SimpleChannelPool> channelPools = new ArrayList<>();
@@ -61,7 +61,7 @@ public class NettyClient {
         poolMap = new AbstractChannelPoolMap<InetSocketAddress, SimpleChannelPool>() {
             @Override
             protected SimpleChannelPool newPool(InetSocketAddress key) {
-                return new FixedChannelPool(bootstrap.remoteAddress(key), new NettyChannelPoolHandler(), 50);
+                return new FixedChannelPool(bootstrap.remoteAddress(key), new NettyChannelPoolHandler(), 20);
             }
         };
     }
