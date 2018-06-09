@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -32,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class NettyClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyClient.class);
+    public static final int MAX_CONNECTIONS = 8;
     private List<Endpoint> endpoints;
     private EventLoopGroup workerGroup;
     private Bootstrap bootstrap;
@@ -49,6 +49,18 @@ public class NettyClient {
             channelPools.add(poolMap.get(new InetSocketAddress(endpoint.getHost(), endpoint.getPort())));
             LOGGER.info("connected to endpoint:{}:{}", endpoint.getHost(), endpoint.getPort());
         }
+        for (SimpleChannelPool channelPool : channelPools) {
+            for (int i = 0; i < MAX_CONNECTIONS; i++) {
+                Future<Channel> f = channelPool.acquire();
+                f.addListener((FutureListener<Channel>) f1 -> {
+                    if (f1.isSuccess()) {
+                        Channel ch = f1.getNow();
+                        LOGGER.info("init channel:{}", ch.id());
+                        channelPool.release(ch);
+                    }
+                });
+            }
+        }
     }
 
     public void build() {
@@ -61,13 +73,14 @@ public class NettyClient {
         poolMap = new AbstractChannelPoolMap<InetSocketAddress, SimpleChannelPool>() {
             @Override
             protected SimpleChannelPool newPool(InetSocketAddress key) {
-                return new FixedChannelPool(bootstrap.remoteAddress(key), new NettyChannelPoolHandler(), 20);
+                return new FixedChannelPool(bootstrap.remoteAddress(key), new NettyChannelPoolHandler(), MAX_CONNECTIONS);
             }
         };
     }
 
     public AgentResponse sendData(AgentRequest agentRequest) {
         long startTime = System.currentTimeMillis();
+        LOGGER.info("Request-traceId:{} The time access sendData:{}", agentRequest.getTraceId(), System.currentTimeMillis());
         AgentClientFuture agentClientFuture = new AgentClientFuture();
         AgentClientRequestHolder.put(String.valueOf(agentRequest.getTraceId()), agentClientFuture);
         SimpleChannelPool pool = channelPools.get(pos.getAndIncrement() % channelPools.size());
@@ -78,6 +91,7 @@ public class NettyClient {
                 Channel ch = f1.getNow();
                 LOGGER.info("Request-traceId:{} The time get channel{}: {} ms", agentRequest.getTraceId(), ch.id(), System.currentTimeMillis() - startTime);
                 ch.writeAndFlush(agentRequest);
+                LOGGER.info("Request-traceId:{} The time write data out: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
                 pool.release(ch);
             }
         });
@@ -91,6 +105,7 @@ public class NettyClient {
             LOGGER.info("{} request timeout", agentRequest.getTraceId());
         }
         LOGGER.info("Request-traceId:{} The time get result: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
+        LOGGER.info("Request-traceId:{} The time finished: {} ms", agentRequest.getTraceId(), System.currentTimeMillis());
         return result;
     }
 }

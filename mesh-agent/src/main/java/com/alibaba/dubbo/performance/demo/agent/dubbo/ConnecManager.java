@@ -6,42 +6,37 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.pool.FixedChannelPool;
+import io.netty.channel.pool.SimpleChannelPool;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+
+import java.net.InetSocketAddress;
 
 public class ConnecManager {
     private EventLoopGroup eventLoopGroup = new NioEventLoopGroup(4);
-
     private Bootstrap bootstrap;
-
-    private Channel channel;
-    private Object lock = new Object();
+    private SimpleChannelPool simpleChannelPool;
 
     public ConnecManager() {
+        initBootstrap();
+        int port = Integer.valueOf(System.getProperty("dubbo.protocol.port"));
+        InetSocketAddress key = new InetSocketAddress("127.0.0.1", port);
+        simpleChannelPool = new FixedChannelPool(bootstrap.remoteAddress(key), new RpcChannelPoolHandler(), 4);
+        for (int i = 0; i < 4; i++) {
+            Future<Channel> f = simpleChannelPool.acquire();
+            f.addListener((FutureListener<Channel>) f1 -> {
+                if (f1.isSuccess()) {
+                    Channel ch = f1.getNow();
+                    simpleChannelPool.release(ch);
+                }
+            });
+        }
     }
 
-    public Channel getChannel() throws Exception {
-        if (null != channel) {
-            return channel;
-        }
-
-        if (null == bootstrap) {
-            synchronized (lock) {
-                if (null == bootstrap) {
-                    initBootstrap();
-                }
-            }
-        }
-
-        if (null == channel) {
-            synchronized (lock){
-                if (null == channel){
-                    int port = Integer.valueOf(System.getProperty("dubbo.protocol.port"));
-                    channel = bootstrap.connect("127.0.0.1", port).sync().channel();
-                }
-            }
-        }
-
-        return channel;
+    public SimpleChannelPool getChannel() throws Exception {
+        return simpleChannelPool;
     }
 
     public void initBootstrap() {
@@ -51,7 +46,6 @@ public class ConnecManager {
                 .option(ChannelOption.SO_KEEPALIVE, true)
                 .option(ChannelOption.TCP_NODELAY, true)
                 .option(ChannelOption.ALLOCATOR, UnpooledByteBufAllocator.DEFAULT)
-                .channel(NioSocketChannel.class)
-                .handler(new RpcClientInitializer());
+                .channel(NioSocketChannel.class);
     }
 }
