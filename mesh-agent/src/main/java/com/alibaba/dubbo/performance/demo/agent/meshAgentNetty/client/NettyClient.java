@@ -28,6 +28,7 @@ import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class NettyClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyClient.class);
@@ -35,11 +36,10 @@ public class NettyClient {
 
     private EventLoopGroup workerGroup;
     private Bootstrap bootstrap;
-    int workerGroupThreads = 5;
+    int workerGroupThreads = 10;
+    private AtomicInteger pos = new AtomicInteger();
     ChannelPoolMap<InetSocketAddress, SimpleChannelPool> poolMap;
     List<SimpleChannelPool> channelPools = new ArrayList<>();
-    private Random random = new Random();
-
     public NettyClient() throws Exception {
         build();
         IRegistry registry = new EtcdRegistry(System.getProperty("etcd.url"));
@@ -69,7 +69,7 @@ public class NettyClient {
     public AgentResponse sendData(AgentRequest agentRequest) {
         AgentClientFuture agentClientFuture = new AgentClientFuture();
         AgentClientRequestHolder.put(String.valueOf(agentRequest.getTraceId()), agentClientFuture);
-        SimpleChannelPool pool = channelPools.get(random.nextInt(channelPools.size()));
+        SimpleChannelPool pool = channelPools.get(pos.getAndIncrement() % channelPools.size());
         LOGGER.info("poolUsed:" + pool);
         Future<Channel> f = pool.acquire();
         f.addListener((FutureListener<Channel>) f1 -> {
