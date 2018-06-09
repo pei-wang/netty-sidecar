@@ -38,9 +38,9 @@ public class HelloController {
 
 
     public Integer consumer(String interfaceName, String method, String parameterTypesString, String parameter) throws Exception {
+        logger.info("access consumer....");
         long startTime = System.currentTimeMillis();
         AgentRequest agentRequest = new AgentRequest();
-        logger.info("Request-traceId:{} access consumer....", agentRequest.getTraceId());
         AgentRpcInvocation agentRpcInvocation = new AgentRpcInvocation();
         agentRpcInvocation.setInterfaceName(interfaceName);
         agentRpcInvocation.setMethod(method);
@@ -48,7 +48,7 @@ public class HelloController {
         agentRpcInvocation.setPrameterTypesString(parameterTypesString);
         agentRequest.setAgentRpcInvocation(agentRpcInvocation);
         AgentResponse agentResponse = nettyClient.sendData(agentRequest);
-        logger.info("Request-traceId:{} The time spent on consumer not include on the waiting time: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
+        logger.info("The time spent on consumer not include on the waiting time: {} ms", System.currentTimeMillis() - startTime);
         int result = Integer.parseInt(new String((byte[]) agentResponse.getResult()));
         return result;
     }

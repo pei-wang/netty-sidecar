@@ -2,9 +2,6 @@ package com.alibaba.dubbo.performance.demo.agent.dubbo;
 
 import com.alibaba.dubbo.performance.demo.agent.dubbo.model.*;
 import io.netty.channel.Channel;
-import io.netty.channel.pool.SimpleChannelPool;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,13 +14,13 @@ public class RpcClient {
 
     private ConnecManager connectManager;
 
-    public RpcClient() {
+    public RpcClient(){
         this.connectManager = new ConnecManager();
     }
 
     public Object invoke(String interfaceName, String method, String parameterTypesString, String parameter) throws Exception {
 
-        SimpleChannelPool pool = connectManager.getChannel();
+        Channel channel = connectManager.getChannel();
 
         RpcInvocation invocation = new RpcInvocation();
         invocation.setMethodName(method);
@@ -43,20 +40,14 @@ public class RpcClient {
         logger.info("requestId=" + request.getId());
 
         RpcFuture future = new RpcFuture();
-        RpcRequestHolder.put(String.valueOf(request.getId()), future);
-        Future<Channel> f = pool.acquire();
-        f.addListener((FutureListener<Channel>) f1 -> {
-            if (f1.isSuccess()) {
-                Channel ch = f1.getNow();
-                ch.writeAndFlush(request);
-                pool.release(ch);
-            }
-        });
+        RpcRequestHolder.put(String.valueOf(request.getId()),future);
+
+        channel.writeAndFlush(request);
 
         Object result = null;
         try {
             result = future.get();
-        } catch (Exception e) {
+        }catch (Exception e){
             e.printStackTrace();
         }
         return result;
