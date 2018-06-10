@@ -5,7 +5,7 @@ import java.util.concurrent.*;
 public class Worker extends Thread {
     private static final BlockingQueue<Runnable> tasks = new LinkedBlockingQueue<>();
 
-    public static ExecutorService executorService = new ThreadPoolExecutor(50, 80, 1000L, TimeUnit.MILLISECONDS, tasks);
+    public static ExecutorService executorService = new ThreadPoolExecutor(30, 30, 1000L, TimeUnit.MILLISECONDS, tasks);
 
     public static void dispatch(DBHandler dbHandler) {
         executorService.execute(dbHandler);

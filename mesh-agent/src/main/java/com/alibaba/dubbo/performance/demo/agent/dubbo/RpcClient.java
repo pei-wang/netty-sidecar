@@ -1,12 +1,16 @@
 package com.alibaba.dubbo.performance.demo.agent.dubbo;
 
-import com.alibaba.dubbo.performance.demo.agent.dubbo.model.*;
+import com.alibaba.dubbo.performance.demo.agent.dubbo.model.JsonUtils;
+import com.alibaba.dubbo.performance.demo.agent.dubbo.model.Request;
+import com.alibaba.dubbo.performance.demo.agent.dubbo.model.RpcFuture;
+import com.alibaba.dubbo.performance.demo.agent.dubbo.model.RpcInvocation;
+import com.alibaba.dubbo.performance.demo.agent.dubbo.model.RpcRequestHolder;
+
+import com.alibaba.dubbo.performance.demo.agent.registry.IRegistry;
 import io.netty.channel.Channel;
-import io.netty.channel.pool.SimpleChannelPool;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStreamWriter;
@@ -16,11 +20,14 @@ public class RpcClient {
     private Logger logger = LoggerFactory.getLogger(RpcClient.class);
 
     private ConnecManager connectManager;
-    public RpcClient() {
+
+    public RpcClient(IRegistry registry){
         this.connectManager = new ConnecManager();
     }
 
     public Object invoke(String interfaceName, String method, String parameterTypesString, String parameter) throws Exception {
+
+        Channel channel = connectManager.getChannel();
 
         RpcInvocation invocation = new RpcInvocation();
         invocation.setMethodName(method);
@@ -38,24 +45,16 @@ public class RpcClient {
         request.setData(invocation);
 
         logger.info("requestId=" + request.getId());
-        long startTime = System.currentTimeMillis();
+
         RpcFuture future = new RpcFuture();
-        RpcRequestHolder.put(String.valueOf(request.getId()), future);
-        SimpleChannelPool pool = connectManager.getChannel();
-        Future<Channel> f = pool.acquire();
-        f.addListener((FutureListener<Channel>) f1 -> {
-            if (f1.isSuccess()) {
-                Channel ch = f1.getNow();
-                logger.info("Request-traceId:{} The time get channel{}: {} ms", request.getId(), ch.id(), System.currentTimeMillis() - startTime);
-                ch.writeAndFlush(request);
-                pool.release(ch);
-            }
-        });
+        RpcRequestHolder.put(String.valueOf(request.getId()),future);
+
+        channel.writeAndFlush(request);
 
         Object result = null;
         try {
             result = future.get();
-        } catch (Exception e) {
+        }catch (Exception e){
             e.printStackTrace();
         }
         return result;

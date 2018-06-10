@@ -16,5 +16,11 @@ public class ServerHandler extends SimpleChannelInboundHandler<AgentRequest> {
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, AgentRequest agentRequest) throws Exception {
         Worker.dispatch(new DBHandler(agentRequest, channelHandlerContext));
     }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        super.exceptionCaught(ctx, cause);
+        cause.printStackTrace();
+    }
 }
 
