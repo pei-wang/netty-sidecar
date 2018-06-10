@@ -14,7 +14,7 @@ public class HelloControllerTest {
     public void consumer() throws Exception {
         HelloController helloController = new HelloController();
         List<Endpoint> endpointList = new ArrayList<>();
-        endpointList.add(new Endpoint("127.0.0.1", 10080));
+        endpointList.add(new Endpoint("127.0.0.1", 10080,1));
 
         for (int i = 0; i < 1000; i++) {
             int a = helloController.consumer("IHelloService", "hi", "String", "world");
