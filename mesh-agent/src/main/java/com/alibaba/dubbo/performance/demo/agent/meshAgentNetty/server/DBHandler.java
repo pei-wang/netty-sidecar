@@ -4,8 +4,11 @@ import com.alibaba.dubbo.performance.demo.agent.dubbo.RpcClient;
 import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentRequest;
 import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentResponse;
 import io.netty.channel.ChannelHandlerContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DBHandler implements Runnable {
+    private final static Logger LOGGER = LoggerFactory.getLogger(DBHandler.class);
     private static final RpcClient rpcClient = new RpcClient();
     private AgentRequest agentRequest;
     private ChannelHandlerContext chx;
@@ -37,6 +40,7 @@ public class DBHandler implements Runnable {
 
     @Override
     public void run() {
+        long startTime = System.currentTimeMillis();
         AgentResponse agentResponse = new AgentResponse();
         agentResponse.setTraceId(String.valueOf(agentRequest.getTraceId()));
         try {
@@ -48,5 +52,7 @@ public class DBHandler implements Runnable {
         } catch (Throwable t) {
             agentResponse.setError(t);
         }
+        LOGGER.info("Request-traceId:{} The time get result form dubbo: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
+        chx.writeAndFlush(agentResponse);
     }
 }
