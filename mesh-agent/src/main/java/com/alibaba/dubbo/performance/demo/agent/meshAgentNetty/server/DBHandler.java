@@ -3,16 +3,13 @@ package com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.server;
 import com.alibaba.dubbo.performance.demo.agent.dubbo.RpcClient;
 import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentRequest;
 import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentResponse;
-import com.alibaba.dubbo.performance.demo.agent.registry.EtcdRegistry;
-import com.alibaba.dubbo.performance.demo.agent.registry.IRegistry;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class DBHandler implements Runnable {
     private final static Logger LOGGER = LoggerFactory.getLogger(DBHandler.class);
-    private static IRegistry registry = new EtcdRegistry(System.getProperty("etcd.url"));
-    private static final RpcClient rpcClient = new RpcClient(registry);
+    private static final RpcClient rpcClient = new RpcClient();
     private AgentRequest agentRequest;
     private ChannelHandlerContext chx;
 
