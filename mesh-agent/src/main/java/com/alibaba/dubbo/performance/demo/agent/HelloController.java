@@ -1,5 +1,6 @@
 package com.alibaba.dubbo.performance.demo.agent;
 
+import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.client.ClientTask;
 import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.client.NettyClient;
 import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentRequest;
 import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentResponse;
@@ -9,46 +10,32 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.async.DeferredResult;
+
+import java.util.concurrent.*;
 
 @RestController
 public class HelloController {
 
     private Logger logger = LoggerFactory.getLogger(HelloController.class);
-    private NettyClient nettyClient;
+    private static final BlockingQueue<Runnable> tasks = new LinkedBlockingQueue<>();
+    public static ExecutorService executorService = new ThreadPoolExecutor(50, 80, 1000L, TimeUnit.MILLISECONDS, tasks);
 
     public HelloController() throws Exception {
-        String type = System.getProperty("type");
-        if ("consumer".equals(type)) {
-            nettyClient = new NettyClient();
-        }
+
     }
 
     @RequestMapping(value = "")
-    public Object invoke(@RequestParam("interface") String interfaceName,
-                         @RequestParam("method") String method,
-                         @RequestParam("parameterTypesString") String parameterTypesString,
-                         @RequestParam("parameter") String parameter) throws Exception {
+    public DeferredResult<Integer> invoke(@RequestParam("interface") String interfaceName,
+                                          @RequestParam("method") String method,
+                                          @RequestParam("parameterTypesString") String parameterTypesString,
+                                          @RequestParam("parameter") String parameter) throws Exception {
         String type = System.getProperty("type");
         if ("consumer".equals(type)) {
-            return consumer(interfaceName, method, parameterTypesString, parameter);
-        } else {
-            return "Environment variable type is needed to set to provider or consumer.";
+            DeferredResult<Integer> deferredResult = new DeferredResult<>();
+            executorService.execute(new ClientTask(interfaceName, method, parameterTypesString, parameter, deferredResult));
+            return deferredResult;
         }
-    }
-
-
-    public Integer consumer(String interfaceName, String method, String parameterTypesString, String parameter) throws Exception {
-        long startTime = System.currentTimeMillis();
-        AgentRequest agentRequest = new AgentRequest();
-        logger.info("Request-traceId:{} access consumer....", agentRequest.getTraceId());
-        AgentRpcInvocation agentRpcInvocation = new AgentRpcInvocation();
-        agentRpcInvocation.setInterfaceName(interfaceName);
-        agentRpcInvocation.setMethod(method);
-        agentRpcInvocation.setPrameter(parameter);
-        agentRpcInvocation.setPrameterTypesString(parameterTypesString);
-        agentRequest.setAgentRpcInvocation(agentRpcInvocation);
-        AgentResponse agentResponse = nettyClient.sendData(agentRequest);
-        int result = Integer.parseInt(new String((byte[]) agentResponse.getResult()));
-        return result;
+        return null;
     }
 }
