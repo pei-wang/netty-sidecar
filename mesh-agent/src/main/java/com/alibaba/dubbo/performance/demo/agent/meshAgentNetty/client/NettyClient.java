@@ -46,7 +46,9 @@ public class NettyClient {
         endpoints = registry.find("com.alibaba.dubbo.performance.demo.provider.IHelloService");
         for (Endpoint endpoint : endpoints) {
             LOGGER.info("trying to connect endpoint{}:{}", endpoint.getHost(), endpoint.getPort());
-            channelPools.add(poolMap.get(new InetSocketAddress(endpoint.getHost(), endpoint.getPort())));
+            for (int i = 0; i < endpoint.getWeight(); i++) {
+                channelPools.add(poolMap.get(new InetSocketAddress(endpoint.getHost(), endpoint.getPort())));
+            }
             LOGGER.info("connected to endpoint:{}:{}", endpoint.getHost(), endpoint.getPort());
         }
         for (SimpleChannelPool channelPool : channelPools) {
