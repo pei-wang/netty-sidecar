@@ -14,8 +14,6 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.EventExecutorGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,7 +22,6 @@ public class NettyServer {
     private Channel channel;
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
-    final EventExecutorGroup group = new DefaultEventExecutorGroup(100);
     int ioThreadNum = 15;
     //内核为此套接口排队的最大连接个数，对于给定的监听套接口，内核要维护两个队列，未链接队列和已连接队列大小总和最大值
 
@@ -32,7 +29,7 @@ public class NettyServer {
 
     int port = Integer.parseInt(System.getProperty("server.port"));
 
-//    int port = 10080;
+    //    int port = 10080;
     public void start() throws InterruptedException {
         LOGGER.info("begin to start rpc server");
         bossGroup = new NioEventLoopGroup();
@@ -55,7 +52,7 @@ public class NettyServer {
                                 .addLast("encoder", new LengthFieldPrepender(4, false))
                                 .addLast(new AgentDecoder(AgentRequest.class))
                                 .addLast(new AgentEncoder(AgentResponse.class))
-                                .addLast(group,"handleDB",new ServerHandler());
+                                .addLast(new ServerHandler());
                     }
                 });
 

@@ -16,10 +16,8 @@ public class RpcClient {
     private Logger logger = LoggerFactory.getLogger(RpcClient.class);
 
     private ConnecManager connectManager;
-    private SimpleChannelPool pool;
-    public RpcClient() throws Exception {
+    public RpcClient() {
         this.connectManager = new ConnecManager();
-        pool = connectManager.getChannel();
     }
 
     public Object invoke(String interfaceName, String method, String parameterTypesString, String parameter) throws Exception {
@@ -43,6 +41,7 @@ public class RpcClient {
         long startTime = System.currentTimeMillis();
         RpcFuture future = new RpcFuture();
         RpcRequestHolder.put(String.valueOf(request.getId()), future);
+        SimpleChannelPool pool = connectManager.getChannel();
         Future<Channel> f = pool.acquire();
         f.addListener((FutureListener<Channel>) f1 -> {
             if (f1.isSuccess()) {
