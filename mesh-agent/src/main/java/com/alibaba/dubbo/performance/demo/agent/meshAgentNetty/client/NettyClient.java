@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class NettyClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyClient.class);
-    public static final int MAX_CONNECTIONS = 10;
+    public static final int MAX_CONNECTIONS = 8;
     private List<Endpoint> endpoints;
     private EventLoopGroup workerGroup;
     private Bootstrap bootstrap;
@@ -46,7 +46,11 @@ public class NettyClient {
         endpoints = registry.find("com.alibaba.dubbo.performance.demo.provider.IHelloService");
         for (Endpoint endpoint : endpoints) {
             LOGGER.info("trying to connect endpoint{}:{}", endpoint.getHost(), endpoint.getPort());
-            for (int i = 0; i < endpoint.getWeight(); i++) {
+            int weight = endpoint.getWeight();
+            if (weight > 2) {
+                weight = weight + 1;
+            }
+            for (int i = 0; i < weight; i++) {
                 channelPools.add(poolMap.get(new InetSocketAddress(endpoint.getHost(), endpoint.getPort())));
             }
             LOGGER.info("connected to endpoint:{}:{}", endpoint.getHost(), endpoint.getPort());
