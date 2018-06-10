@@ -19,7 +19,7 @@ public class HelloController {
 
     private Logger logger = LoggerFactory.getLogger(HelloController.class);
     private static final BlockingQueue<Runnable> tasks = new LinkedBlockingQueue<>();
-    public static ExecutorService executorService = new ThreadPoolExecutor(50, 80, 1000L, TimeUnit.MILLISECONDS, tasks);
+    public static ExecutorService executorService = new ThreadPoolExecutor(120, 120, 1000L, TimeUnit.MILLISECONDS, tasks);
 
     public HelloController() throws Exception {
 
@@ -33,6 +33,7 @@ public class HelloController {
         String type = System.getProperty("type");
         if ("consumer".equals(type)) {
             DeferredResult<Integer> deferredResult = new DeferredResult<>();
+            logger.info("Hello controller queue size:{}", tasks.size());
             executorService.execute(new ClientTask(interfaceName, method, parameterTypesString, parameter, deferredResult));
             return deferredResult;
         }
