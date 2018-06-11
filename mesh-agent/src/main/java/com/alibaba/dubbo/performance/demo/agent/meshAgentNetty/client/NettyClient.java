@@ -56,18 +56,6 @@ public class NettyClient {
             }
             LOGGER.info("connected to endpoint:{}:{}", endpoint.getHost(), endpoint.getPort());
         }
-        for (SimpleChannelPool channelPool : channelPools) {
-            for (int i = 0; i < MAX_CONNECTIONS; i++) {
-                Future<Channel> f = channelPool.acquire();
-                f.addListener((FutureListener<Channel>) f1 -> {
-                    if (f1.isSuccess()) {
-                        Channel ch = f1.getNow();
-                        LOGGER.info("init channel:{}", ch.id());
-                        channelPool.release(ch);
-                    }
-                });
-            }
-        }
     }
 
     public void build() {
