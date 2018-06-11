@@ -8,6 +8,7 @@ import com.alibaba.dubbo.performance.demo.agent.registry.EtcdRegistry;
 import com.alibaba.dubbo.performance.demo.agent.registry.IRegistry;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -31,7 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class NettyClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyClient.class);
-    public static final int MAX_CONNECTIONS = 20;
+    public static final int MAX_CONNECTIONS = 1;
     private List<Endpoint> endpoints;
     private EventLoopGroup workerGroup;
     private Bootstrap bootstrap;
@@ -96,7 +97,14 @@ public class NettyClient {
             if (f1.isSuccess()) {
                 Channel ch = f1.getNow();
                 LOGGER.info("Request-traceId:{} The time get channel{}: {} ms", agentRequest.getTraceId(), ch.id(), System.currentTimeMillis() - startTime);
-                ch.writeAndFlush(agentRequest);
+                ChannelFuture lastWriteFuture = ch.writeAndFlush(agentRequest);
+                if (lastWriteFuture != null) {
+                    try {
+                        lastWriteFuture.sync();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
                 LOGGER.info("Request-traceId:{} The time write data out: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
                 LOGGER.info("Request-traceId:{} The time write data out: {} ", agentRequest.getTraceId(), System.currentTimeMillis());
                 pool.release(ch);
