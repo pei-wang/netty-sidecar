@@ -56,6 +56,18 @@ public class NettyClient {
             }
             LOGGER.info("connected to endpoint:{}:{}", endpoint.getHost(), endpoint.getPort());
         }
+        for (SimpleChannelPool channelPool : channelPools) {
+            for (int i = 0; i < MAX_CONNECTIONS; i++) {
+                Future<Channel> f = channelPool.acquire();
+                f.addListener((FutureListener<Channel>) f1 -> {
+                    if (f1.isSuccess()) {
+                        Channel ch = f1.getNow();
+                        LOGGER.info("init channel:{}", ch.id());
+                        channelPool.release(ch);
+                    }
+                });
+            }
+        }
     }
 
     public void build() {
@@ -86,14 +98,7 @@ public class NettyClient {
                 Channel ch = f1.getNow();
                 LOGGER.info("Request-traceId:{} The time get channel{}: {} ms", agentRequest.getTraceId(), ch.id(), System.currentTimeMillis() - startTime);
                 long channelUseTimeStart = System.currentTimeMillis();
-                ChannelFuture lastWriteFuture = ch.writeAndFlush(agentRequest);
-                if (lastWriteFuture != null) {
-                    try {
-                        lastWriteFuture.sync();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
+                ch.writeAndFlush(agentRequest);
                 LOGGER.info("Request-traceId:{} channel used time: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - channelUseTimeStart);
                 LOGGER.info("Request-traceId:{} The time write data out: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
                 pool.release(ch);
