@@ -13,11 +13,11 @@ public class Worker extends Thread {
         static {
             long totalMemory = Runtime.getRuntime().totalMemory() / 1024 / 1024;
             if (totalMemory < 600) {
-                executorService = new ThreadPoolExecutor(30, 30, 600L, TimeUnit.MILLISECONDS, tasks);
+                executorService = new ThreadPoolExecutor(10, 10, 600L, TimeUnit.MILLISECONDS, tasks);
             } else if (totalMemory < 1600) {
-                executorService = new ThreadPoolExecutor(50, 50, 600L, TimeUnit.MILLISECONDS, tasks);
+                executorService = new ThreadPoolExecutor(20, 20, 600L, TimeUnit.MILLISECONDS, tasks);
             } else if (totalMemory < 2600) {
-                executorService = new ThreadPoolExecutor(80, 80, 600L, TimeUnit.MILLISECONDS, tasks);
+                executorService = new ThreadPoolExecutor(30, 30, 600L, TimeUnit.MILLISECONDS, tasks);
             }
         }
 //    public static ExecutorService executorService = new ThreadPoolExecutor(80, Integer.MAX_VALUE, 100L, TimeUnit.MILLISECONDS, tasks);

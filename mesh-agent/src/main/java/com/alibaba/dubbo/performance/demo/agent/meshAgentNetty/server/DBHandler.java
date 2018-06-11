@@ -57,5 +57,6 @@ public class DBHandler implements Runnable {
         }
         LOGGER.info("Request-traceId:{} The time get result form dubbo: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
         chx.writeAndFlush(agentResponse);
+        LOGGER.info("Request-traceId:{} The departure time at provider:{}", agentRequest.getTraceId(), System.currentTimeMillis());
     }
 }

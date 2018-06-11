@@ -14,6 +14,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<AgentRequest> {
 
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, AgentRequest agentRequest) throws Exception {
+        LOGGER.info("Request-traceId:{},The arrived time at provider:{}", agentRequest.getTraceId(), System.currentTimeMillis());
         Worker.dispatch(new DBHandler(agentRequest, channelHandlerContext));
     }
 
