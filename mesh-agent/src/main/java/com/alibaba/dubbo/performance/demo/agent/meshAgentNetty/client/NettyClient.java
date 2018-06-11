@@ -1,8 +1,6 @@
 package com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.client;
 
 import com.alibaba.dubbo.performance.demo.agent.AgentClientFuture;
-import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentDecoder;
-import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentEncoder;
 import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentRequest;
 import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentResponse;
 import com.alibaba.dubbo.performance.demo.agent.registry.Endpoint;
@@ -10,7 +8,6 @@ import com.alibaba.dubbo.performance.demo.agent.registry.EtcdRegistry;
 import com.alibaba.dubbo.performance.demo.agent.registry.IRegistry;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -18,10 +15,7 @@ import io.netty.channel.pool.AbstractChannelPoolMap;
 import io.netty.channel.pool.ChannelPoolMap;
 import io.netty.channel.pool.FixedChannelPool;
 import io.netty.channel.pool.SimpleChannelPool;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import org.slf4j.Logger;
@@ -45,7 +39,6 @@ public class NettyClient {
     private AtomicInteger pos = new AtomicInteger();
     ChannelPoolMap<InetSocketAddress, SimpleChannelPool> poolMap;
     List<SimpleChannelPool> channelPools = new ArrayList<>();
-    private Channel[] channels = new Channel[8];
 
     public NettyClient() throws Exception {
         build();
@@ -55,34 +48,25 @@ public class NettyClient {
             LOGGER.info("trying to connect endpoint{}:{}", endpoint.getHost(), endpoint.getPort());
             int weight = endpoint.getWeight();
             if (weight > 1) {
-//                weight = weight + 1;
-                endpoints.add(endpoint.copy());
+                weight = weight + 1;
             }
-//            for (int i = 0; i < weight; i++) {
-//
-////                channelPools.add(poolMap.get(new InetSocketAddress(endpoint.getHost(), endpoint.getPort())));
-//            }
+            for (int i = 0; i < weight; i++) {
+                channelPools.add(poolMap.get(new InetSocketAddress(endpoint.getHost(), endpoint.getPort())));
+            }
             LOGGER.info("connected to endpoint:{}:{}", endpoint.getHost(), endpoint.getPort());
         }
-
-        LOGGER.info("total channel size:{}", channels.length);
-        for (int i = 0; i < endpoints.size(); i++) {
-            Endpoint endpoint = endpoints.get(i);
-            channels[i] = bootstrap.connect(endpoint.getHost(), endpoint.getPort()).sync().channel();
+        for (SimpleChannelPool channelPool : channelPools) {
+            for (int i = 0; i < MAX_CONNECTIONS; i++) {
+                Future<Channel> f = channelPool.acquire();
+                f.addListener((FutureListener<Channel>) f1 -> {
+                    if (f1.isSuccess()) {
+                        Channel ch = f1.getNow();
+                        LOGGER.info("init channel:{}", ch.id());
+                        channelPool.release(ch);
+                    }
+                });
+            }
         }
-
-//        for (SimpleChannelPool channelPool : channelPools) {
-//            for (int i = 0; i < MAX_CONNECTIONS; i++) {
-//                Future<Channel> f = channelPool.acquire();
-//                f.addListener((FutureListener<Channel>) f1 -> {
-//                    if (f1.isSuccess()) {
-//                        Channel ch = f1.getNow();
-//                        LOGGER.info("init channel:{}", ch.id());
-//                        channelPool.release(ch);
-//                    }
-//                });
-//            }
-//        }
     }
 
     public void build() {
@@ -91,25 +75,13 @@ public class NettyClient {
         bootstrap.group(workerGroup)
                 .channel(NioSocketChannel.class)
                 .option(ChannelOption.SO_KEEPALIVE, true)
-                .option(ChannelOption.TCP_NODELAY, true)
-                .handler(new ChannelInitializer<SocketChannel>() {
-                    @Override
-                    protected void initChannel(SocketChannel channel) throws Exception {
-                        channel.pipeline()
-                                //处理分包传输问题
-                                .addLast("decoder", new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4))
-                                .addLast("encoder", new LengthFieldPrepender(4, false))
-                                .addLast(new AgentDecoder(AgentResponse.class))
-                                .addLast(new AgentEncoder(AgentRequest.class))
-                                .addLast(new ClientHandler());
-                    }
-                });
-//        poolMap = new AbstractChannelPoolMap<InetSocketAddress, SimpleChannelPool>() {
-//            @Override
-//            protected SimpleChannelPool newPool(InetSocketAddress key) {
-//                return new FixedChannelPool(bootstrap.remoteAddress(key), new NettyChannelPoolHandler(), MAX_CONNECTIONS);
-//            }
-//        };
+                .option(ChannelOption.TCP_NODELAY, true);
+        poolMap = new AbstractChannelPoolMap<InetSocketAddress, SimpleChannelPool>() {
+            @Override
+            protected SimpleChannelPool newPool(InetSocketAddress key) {
+                return new FixedChannelPool(bootstrap.remoteAddress(key), new NettyChannelPoolHandler(), MAX_CONNECTIONS);
+            }
+        };
     }
 
     public AgentResponse sendData(AgentRequest agentRequest) {
@@ -117,24 +89,23 @@ public class NettyClient {
         LOGGER.info("Request-traceId:{} The time access sendData:{}", agentRequest.getTraceId(), System.currentTimeMillis());
         AgentClientFuture agentClientFuture = new AgentClientFuture();
         AgentClientRequestHolder.put(String.valueOf(agentRequest.getTraceId()), agentClientFuture);
-        channels[pos.getAndIncrement() % channels.length].writeAndFlush(agentRequest);
-//        SimpleChannelPool pool = channelPools.get(pos.getAndIncrement() % channelPools.size());
-//        LOGGER.info("Request-traceId:{} poolUsed:{}", agentRequest.getTraceId(), pool);
-//        Future<Channel> f = pool.acquire();
-//        f.addListener((FutureListener<Channel>) f1 -> {
-//            if (f1.isSuccess()) {
-//                Channel ch = f1.getNow();
-//                LOGGER.info("Request-traceId:{} The time get channel{}: {} ms", agentRequest.getTraceId(), ch.id(), System.currentTimeMillis() - startTime);
-//                ch.writeAndFlush(agentRequest);
-//                LOGGER.info("Request-traceId:{} The time write data out: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
-//                LOGGER.info("Request-traceId:{} The time write data out: {} ", agentRequest.getTraceId(), System.currentTimeMillis());
-//                pool.release(ch);
-//            }
-//        });
+        SimpleChannelPool pool = channelPools.get(pos.getAndIncrement() % channelPools.size());
+        LOGGER.info("Request-traceId:{} poolUsed:{}", agentRequest.getTraceId(), pool);
+        Future<Channel> f = pool.acquire();
+        f.addListener((FutureListener<Channel>) f1 -> {
+            if (f1.isSuccess()) {
+                Channel ch = f1.getNow();
+                LOGGER.info("Request-traceId:{} The time get channel{}: {} ms", agentRequest.getTraceId(), ch.id(), System.currentTimeMillis() - startTime);
+                ch.writeAndFlush(agentRequest);
+                LOGGER.info("Request-traceId:{} The time write data out: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
+                LOGGER.info("Request-traceId:{} The time write data out: {} ", agentRequest.getTraceId(), System.currentTimeMillis());
+                pool.release(ch);
+            }
+        });
         AgentResponse result = null;
         LOGGER.info("Request-traceId:{} The time before future get: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
         try {
-            result = agentClientFuture.get(1000L, TimeUnit.MILLISECONDS);
+            result = agentClientFuture.get(5000L, TimeUnit.MILLISECONDS);
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
         } catch (TimeoutException e) {
