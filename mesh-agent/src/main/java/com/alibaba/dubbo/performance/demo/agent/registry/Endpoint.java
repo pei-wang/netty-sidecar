@@ -35,6 +35,10 @@ public class Endpoint {
         return weight;
     }
 
+    public Endpoint copy() {
+        return new Endpoint(host, port, weight);
+    }
+
     public int hashCode() {
         return host.hashCode() + port;
     }
