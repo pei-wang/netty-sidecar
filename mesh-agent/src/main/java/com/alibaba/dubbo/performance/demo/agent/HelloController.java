@@ -19,7 +19,7 @@ public class HelloController {
 
     private Logger logger = LoggerFactory.getLogger(HelloController.class);
     private static final BlockingQueue<Runnable> tasks = new LinkedBlockingQueue<>();
-    public static ExecutorService executorService = new ThreadPoolExecutor(120, 120, 1000L, TimeUnit.MILLISECONDS, tasks);
+    public static ExecutorService executorService = new ThreadPoolExecutor(60, 60, 1000L, TimeUnit.MILLISECONDS, tasks);
 
     public HelloController() throws Exception {
 
