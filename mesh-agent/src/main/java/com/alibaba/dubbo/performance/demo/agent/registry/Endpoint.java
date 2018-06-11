@@ -38,8 +38,4 @@ public class Endpoint {
     public int hashCode() {
         return host.hashCode() + port;
     }
-
-    public Endpoint copy() {
-        return new Endpoint(host, port, weight);
-    }
 }
