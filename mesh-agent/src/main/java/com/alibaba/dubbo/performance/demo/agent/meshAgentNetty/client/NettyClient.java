@@ -97,6 +97,7 @@ public class NettyClient {
             if (f1.isSuccess()) {
                 Channel ch = f1.getNow();
                 LOGGER.info("Request-traceId:{} The time get channel{}: {} ms", agentRequest.getTraceId(), ch.id(), System.currentTimeMillis() - startTime);
+                long channelUseTimeStart = System.currentTimeMillis();
                 ChannelFuture lastWriteFuture = ch.writeAndFlush(agentRequest);
                 if (lastWriteFuture != null) {
                     try {
@@ -105,8 +106,8 @@ public class NettyClient {
                         e.printStackTrace();
                     }
                 }
+                LOGGER.info("Request-traceId:{} channel used time: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - channelUseTimeStart);
                 LOGGER.info("Request-traceId:{} The time write data out: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
-                LOGGER.info("Request-traceId:{} The time write data out: {} ", agentRequest.getTraceId(), System.currentTimeMillis());
                 pool.release(ch);
             }
         });
