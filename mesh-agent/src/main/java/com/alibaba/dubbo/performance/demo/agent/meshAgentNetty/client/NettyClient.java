@@ -9,6 +9,7 @@ import com.alibaba.dubbo.performance.demo.agent.registry.Endpoint;
 import com.alibaba.dubbo.performance.demo.agent.registry.EtcdRegistry;
 import com.alibaba.dubbo.performance.demo.agent.registry.IRegistry;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.pool.AbstractChannelPoolMap;
@@ -38,6 +39,7 @@ public class NettyClient {
     private Random random = new Random();
     private static NettyClient instance = null;
     private final ConcurrentMap<Long, SimpleCallback<AgentResponse>> callbackMap = new ConcurrentHashMap<>();
+    private static long NstartTime = System.currentTimeMillis();
 
     public static NettyClient getInstance() {
         if (instance == null) {
@@ -59,12 +61,13 @@ public class NettyClient {
     }
 
     private void build() throws Exception {
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
+        EventLoopGroup workerGroup = new NioEventLoopGroup(8);
         bootstrap = new Bootstrap();
         bootstrap.group(workerGroup)
                 .channel(NioSocketChannel.class)
                 .option(ChannelOption.SO_KEEPALIVE, true)
                 .option(ChannelOption.TCP_NODELAY, true)
+                .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel ch) throws Exception {
@@ -85,7 +88,7 @@ public class NettyClient {
                 sizes = sizes + endpoint.getWeight();
             }
         }
-        channels = new Channel[sizes];
+        channels = new Channel[sizes * 2];
         int index = 0;
         for (Endpoint endpoint : endpoints) {
             LOGGER.info("trying to connect endpoint{}:{}", endpoint.getHost(), endpoint.getPort());
@@ -95,32 +98,32 @@ public class NettyClient {
             }
             for (int i = 0; i < weight; i++) {
                 LOGGER.info("connected to endpoint:{}:{}", endpoint.getHost(), endpoint.getPort());
-                channels[index] = bootstrap.connect(endpoint.getHost(), endpoint.getPort()).sync().channel();
-                index++;
+                for (int j = 0; j < 2; j++) {
+                    channels[index] = bootstrap.connect(endpoint.getHost(), endpoint.getPort()).sync().channel();
+                    index++;
+                }
             }
         }
     }
 
     public void sendData(AgentRequest agentRequest, SimpleCallback<AgentResponse> callback) {
-        long startTime = System.currentTimeMillis();
         callbackMap.put(agentRequest.getTraceId(), callback);
         LOGGER.info("Request-traceId:{} The time access sendData:{}", agentRequest.getTraceId(), System.currentTimeMillis());
-        AgentClientFuture agentClientFuture = new AgentClientFuture();
-        AgentClientRequestHolder.put(String.valueOf(agentRequest.getTraceId()), agentClientFuture);
         int o1 = random.nextInt(channels.length);
-        LOGGER.info("channel size:{}, random number:{}", channels.length, o1);
-
         Channel channel = channels[o1];
         channel.writeAndFlush(agentRequest);
-        LOGGER.info("Request-traceId:{} The time get result: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
     }
 
     public void handleResponse(AgentResponse agentResponse) {
-        LOGGER.info("agentResponse in handle {}", agentResponse.getTraceId());
+        LOGGER.info("Request-traceId:{} The time access handleResponse:{}", agentResponse.getTraceId(), System.currentTimeMillis());
         SimpleCallback<AgentResponse> agentResponseSimpleCallback = callbackMap.remove(Long.parseLong(agentResponse.getTraceId()));
         LOGGER.info("callback:" + agentResponseSimpleCallback);
         if (agentResponseSimpleCallback != null) {
             agentResponseSimpleCallback.operationComplete(agentResponse, null);
         }
+        if ((System.currentTimeMillis() - NstartTime) > 1000) {
+            LOGGER.info("callback size:{}", callbackMap.size());
+        }
+
     }
 }

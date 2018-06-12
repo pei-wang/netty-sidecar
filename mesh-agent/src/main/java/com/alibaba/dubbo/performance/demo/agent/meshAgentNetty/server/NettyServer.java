@@ -10,6 +10,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -33,12 +35,12 @@ public class NettyServer {
     //    int port = 10080;
     public void start() throws InterruptedException {
         LOGGER.info("begin to start rpc server");
-        bossGroup = new NioEventLoopGroup();
-        workerGroup = new NioEventLoopGroup(ioThreadNum);
+        bossGroup = new EpollEventLoopGroup();
+        workerGroup = new EpollEventLoopGroup(ioThreadNum);
 
         ServerBootstrap serverBootstrap = new ServerBootstrap();
         serverBootstrap.group(bossGroup, workerGroup)
-                .channel(NioServerSocketChannel.class)
+                .channel(EpollServerSocketChannel.class)
                 .option(ChannelOption.SO_BACKLOG, backlog)
                 //注意是childOption
                 .childOption(ChannelOption.SO_KEEPALIVE, true)

@@ -18,7 +18,7 @@ public class ClientHandler extends SimpleChannelInboundHandler<AgentResponse> {
 
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, AgentResponse agentResponse) throws Exception {
-        LOGGER.info("Request-traceId:{} The time in clientHandler:{}", agentResponse.getTraceId(), System.currentTimeMillis());
+        LOGGER.info("Request-traceId:{} The time access clientHandler:{}", agentResponse.getTraceId(), System.currentTimeMillis());
         NettyClient.getInstance().handleResponse(agentResponse);
     }
 }

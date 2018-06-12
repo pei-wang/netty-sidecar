@@ -41,8 +41,9 @@ public class ClientTask implements Runnable {
         NettyClient.getInstance().sendData(agentRequest, new SimpleCallback<AgentResponse>() {
             @Override
             public void operationComplete(AgentResponse msg, Throwable t) {
+                LOGGER.info("Request-traceId:{} The time access callback:{}", msg.getTraceId(), System.currentTimeMillis());
                 int result = Integer.parseInt(new String((byte[]) msg.getResult()));
-                LOGGER.info("The request {} takes {} ms to finished", msg.getTraceId(), System.currentTimeMillis() - startTime);
+                LOGGER.info("The Request-traceId:{} takes {} ms to finished", msg.getTraceId(), System.currentTimeMillis() - startTime);
                 deferredResult.setResult(result);
             }
         });
