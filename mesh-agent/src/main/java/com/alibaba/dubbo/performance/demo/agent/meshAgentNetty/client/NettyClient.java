@@ -7,10 +7,7 @@ import com.alibaba.dubbo.performance.demo.agent.registry.Endpoint;
 import com.alibaba.dubbo.performance.demo.agent.registry.EtcdRegistry;
 import com.alibaba.dubbo.performance.demo.agent.registry.IRegistry;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.pool.AbstractChannelPoolMap;
 import io.netty.channel.pool.ChannelPoolMap;
@@ -32,19 +29,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class NettyClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyClient.class);
-    public static final int MAX_CONNECTIONS = 10;
-    private List<Endpoint> endpoints;
-    private EventLoopGroup workerGroup;
+    public static final int MAX_CONNECTIONS = 20;
     private Bootstrap bootstrap;
-    int workerGroupThreads = 15;
     private AtomicInteger pos = new AtomicInteger();
-    ChannelPoolMap<InetSocketAddress, SimpleChannelPool> poolMap;
-    List<SimpleChannelPool> channelPools = new ArrayList<>();
+    private ChannelPoolMap<InetSocketAddress, SimpleChannelPool> poolMap;
+    private List<SimpleChannelPool> channelPools = new ArrayList<>();
 
     public NettyClient() throws Exception {
         build();
         IRegistry registry = new EtcdRegistry(System.getProperty("etcd.url"));
-        endpoints = registry.find("com.alibaba.dubbo.performance.demo.provider.IHelloService");
+        List<Endpoint> endpoints = registry.find("com.alibaba.dubbo.performance.demo.provider.IHelloService");
         for (Endpoint endpoint : endpoints) {
             LOGGER.info("trying to connect endpoint{}:{}", endpoint.getHost(), endpoint.getPort());
             int weight = endpoint.getWeight();
@@ -70,8 +64,9 @@ public class NettyClient {
         }
     }
 
-    public void build() {
-        workerGroup = new NioEventLoopGroup(workerGroupThreads);
+    private void build() {
+        int workerGroupThreads = 16;
+        EventLoopGroup workerGroup = new NioEventLoopGroup(workerGroupThreads);
         bootstrap = new Bootstrap();
         bootstrap.group(workerGroup)
                 .channel(NioSocketChannel.class)
@@ -98,10 +93,14 @@ public class NettyClient {
                 Channel ch = f1.getNow();
                 LOGGER.info("Request-traceId:{} The time get channel{}: {} ms", agentRequest.getTraceId(), ch.id(), System.currentTimeMillis() - startTime);
                 long channelUseTimeStart = System.currentTimeMillis();
-                ch.writeAndFlush(agentRequest);
-                LOGGER.info("Request-traceId:{} channel used time: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - channelUseTimeStart);
-                LOGGER.info("Request-traceId:{} The time write data out: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
-                pool.release(ch);
+                ChannelFuture channelFuture = ch.writeAndFlush(agentRequest);
+                channelFuture.addListener((ChannelFutureListener) future -> {
+                    if (future.isSuccess()) {
+                        LOGGER.info("Request-traceId:{} channel used time: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - channelUseTimeStart);
+                        LOGGER.info("Request-traceId:{} The time write data out: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
+                        pool.release(ch);
+                    }
+                });
             }
         });
         AgentResponse result = null;
