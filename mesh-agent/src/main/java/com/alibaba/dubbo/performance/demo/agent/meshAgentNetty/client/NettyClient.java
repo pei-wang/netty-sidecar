@@ -79,7 +79,11 @@ public class NettyClient {
         List<Endpoint> endpoints = registry.find("com.alibaba.dubbo.performance.demo.provider.IHelloService");
         int sizes = 0;
         for (Endpoint endpoint : endpoints) {
-            sizes = sizes + endpoint.getWeight();
+            if (endpoint.getWeight() > 1) {
+                sizes = sizes + endpoint.getWeight() + 1;
+            } else {
+                sizes = sizes + endpoint.getWeight();
+            }
         }
         channels = new Channel[sizes];
         int index = 0;
@@ -90,9 +94,10 @@ public class NettyClient {
                 weight = weight + 1;
             }
             for (int i = 0; i < weight; i++) {
+                LOGGER.info("connected to endpoint:{}:{}", endpoint.getHost(), endpoint.getPort());
                 channels[index] = bootstrap.connect(endpoint.getHost(), endpoint.getPort()).sync().channel();
+                index++;
             }
-            LOGGER.info("connected to endpoint:{}:{}", endpoint.getHost(), endpoint.getPort());
         }
     }
 
