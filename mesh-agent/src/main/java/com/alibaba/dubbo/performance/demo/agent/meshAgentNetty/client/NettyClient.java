@@ -61,7 +61,7 @@ public class NettyClient {
     }
 
     private void build() throws Exception {
-        EventLoopGroup workerGroup = new NioEventLoopGroup(8);
+        EventLoopGroup workerGroup = new NioEventLoopGroup(16);
         bootstrap = new Bootstrap();
         bootstrap.group(workerGroup)
                 .channel(NioSocketChannel.class)
@@ -88,7 +88,7 @@ public class NettyClient {
                 sizes = sizes + endpoint.getWeight();
             }
         }
-        channels = new Channel[sizes * 2];
+        channels = new Channel[sizes * 4];
         int index = 0;
         for (Endpoint endpoint : endpoints) {
             LOGGER.info("trying to connect endpoint{}:{}", endpoint.getHost(), endpoint.getPort());
@@ -98,12 +98,13 @@ public class NettyClient {
             }
             for (int i = 0; i < weight; i++) {
                 LOGGER.info("connected to endpoint:{}:{}", endpoint.getHost(), endpoint.getPort());
-                for (int j = 0; j < 2; j++) {
+                for (int j = 0; j < 4; j++) {
                     channels[index] = bootstrap.connect(endpoint.getHost(), endpoint.getPort()).sync().channel();
                     index++;
                 }
             }
         }
+        LOGGER.info("channel size:{}", channels.length);
     }
 
     public void sendData(AgentRequest agentRequest, SimpleCallback<AgentResponse> callback) {

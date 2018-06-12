@@ -23,6 +23,7 @@ public class RpcClient {
     private ConcurrentMap<Long, SimpleCallback<RpcResponse>> callbackMap = new ConcurrentHashMap<>();
     private static IRegistry registry = new EtcdRegistry(System.getProperty("etcd.url"));
     private static RpcClient rpcClient;
+    private static long NstartTime;
 
     public static RpcClient getInstance() {
         if (rpcClient == null) {
@@ -38,6 +39,9 @@ public class RpcClient {
     }
 
     public void handleResponse(RpcResponse rpcResponse) {
+        if ((System.currentTimeMillis() - NstartTime) > 1000) {
+            logger.info("callback size:{}", callbackMap.size());
+        }
         SimpleCallback<RpcResponse> simpleCallback = callbackMap.remove(Long.parseLong(rpcResponse.getRequestId()));
         if (simpleCallback != null) {
             simpleCallback.operationComplete(rpcResponse, null);
