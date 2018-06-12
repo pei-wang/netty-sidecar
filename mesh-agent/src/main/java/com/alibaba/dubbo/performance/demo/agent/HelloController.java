@@ -34,7 +34,6 @@ public class HelloController {
         String type = System.getProperty("type");
         if ("consumer".equals(type)) {
             DeferredResult<Integer> deferredResult = new DeferredResult<>();
-            logger.info("Hello controller queue size:{}", tasks.size());
             new ClientTask(interfaceName, method, parameterTypesString, parameter, deferredResult).run();
             if ((System.currentTimeMillis() - startTime) > 1000) {
                 long freeMemory = Runtime.getRuntime().freeMemory() / 1024 / 1024;//已使用内存
