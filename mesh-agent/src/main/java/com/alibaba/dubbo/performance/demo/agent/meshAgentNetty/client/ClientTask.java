@@ -29,6 +29,7 @@ public class ClientTask implements Runnable {
 
     @Override
     public void run() {
+        long startTime = System.currentTimeMillis();
         AgentRequest agentRequest = new AgentRequest();
         LOGGER.info("Request-traceId:{} access consumer....", agentRequest.getTraceId());
         AgentRpcInvocation agentRpcInvocation = new AgentRpcInvocation();
@@ -41,6 +42,7 @@ public class ClientTask implements Runnable {
             @Override
             public void operationComplete(AgentResponse msg, Throwable t) {
                 int result = Integer.parseInt(new String((byte[]) msg.getResult()));
+                LOGGER.info("The request {} takes {} ms to finished", msg.getTraceId(), System.currentTimeMillis() - startTime);
                 deferredResult.setResult(result);
             }
         });

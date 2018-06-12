@@ -30,7 +30,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<AgentRequest> {
                     agentRequest.getAgentRpcInvocation().getPrameter(), new SimpleCallback<RpcResponse>() {
                         @Override
                         public void operationComplete(RpcResponse msg, Throwable t) {
-                            LOGGER.info("output response.....");
+                            LOGGER.info("Request-traceId:{} The time get result from dubbo: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
                             agentResponse.setResult(msg.getBytes());
                             channelHandlerContext.writeAndFlush(agentResponse);
                         }
@@ -38,7 +38,6 @@ public class ServerHandler extends SimpleChannelInboundHandler<AgentRequest> {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        LOGGER.info("Request-traceId:{} The time get result form dubbo: {} ms", agentRequest.getTraceId(), System.currentTimeMillis() - startTime);
 
     }
 
