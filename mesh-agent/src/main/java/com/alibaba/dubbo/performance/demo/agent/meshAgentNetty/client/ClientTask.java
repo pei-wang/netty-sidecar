@@ -6,18 +6,10 @@ import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentRpcIn
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.context.request.async.DeferredResult;
+import sun.nio.ch.Net;
 
 public class ClientTask implements Runnable {
-    private static NettyClient nettyClient = null;
     private static final Logger LOGGER = LoggerFactory.getLogger(ClientTask.class);
-
-    static {
-        try {
-            nettyClient = new NettyClient();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
     private String interfaceName;
     private String method;
@@ -45,8 +37,12 @@ public class ClientTask implements Runnable {
         agentRpcInvocation.setPrameter(parameter);
         agentRpcInvocation.setPrameterTypesString(parameterTypesString);
         agentRequest.setAgentRpcInvocation(agentRpcInvocation);
-        AgentResponse agentResponse = nettyClient.sendData(agentRequest);
-        int result = Integer.parseInt(new String((byte[]) agentResponse.getResult()));
-        deferredResult.setResult(result);
+        NettyClient.getInstance().sendData(agentRequest, new SimpleCallback<AgentResponse>() {
+            @Override
+            public void operationComplete(AgentResponse msg, Throwable t) {
+                int result = Integer.parseInt(new String((byte[]) msg.getResult()));
+                deferredResult.setResult(result);
+            }
+        });
     }
 }
