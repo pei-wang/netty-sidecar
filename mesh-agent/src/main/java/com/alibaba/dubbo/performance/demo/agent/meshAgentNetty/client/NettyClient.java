@@ -1,6 +1,5 @@
 package com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.client;
 
-import com.alibaba.dubbo.performance.demo.agent.AgentClientFuture;
 import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentDecoder;
 import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentEncoder;
 import com.alibaba.dubbo.performance.demo.agent.meshAgentNetty.common.AgentRequest;
@@ -10,32 +9,28 @@ import com.alibaba.dubbo.performance.demo.agent.registry.EtcdRegistry;
 import com.alibaba.dubbo.performance.demo.agent.registry.IRegistry;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.pool.AbstractChannelPoolMap;
-import io.netty.channel.pool.ChannelPoolMap;
-import io.netty.channel.pool.FixedChannelPool;
-import io.netty.channel.pool.SimpleChannelPool;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public class NettyClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyClient.class);
     private Bootstrap bootstrap;
-    private Channel[] channels;
+    private Invoker[] weightInvokers;
+    private Invoker[] invokers;
     private Random random = new Random();
     private static NettyClient instance = null;
     private final ConcurrentMap<Long, SimpleCallback<AgentResponse>> callbackMap = new ConcurrentHashMap<>();
@@ -66,6 +61,7 @@ public class NettyClient {
         bootstrap.group(workerGroup)
                 .channel(NioSocketChannel.class)
                 .option(ChannelOption.SO_KEEPALIVE, true)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 3 * 1000)
                 .option(ChannelOption.TCP_NODELAY, true)
                 .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
                 .handler(new ChannelInitializer<SocketChannel>() {
@@ -80,38 +76,31 @@ public class NettyClient {
                 });
         IRegistry registry = new EtcdRegistry(System.getProperty("etcd.url"));
         List<Endpoint> endpoints = registry.find("com.alibaba.dubbo.performance.demo.provider.IHelloService");
-        int sizes = 0;
-        for (Endpoint endpoint : endpoints) {
-            if (endpoint.getWeight() > 1) {
-                sizes = sizes + endpoint.getWeight() + 1;
-            } else {
-                sizes = sizes + endpoint.getWeight();
-            }
-        }
-        channels = new Channel[sizes * 8];
+        invokers = new Invoker[3];
         int index = 0;
+        int size = 0;
         for (Endpoint endpoint : endpoints) {
-            LOGGER.info("trying to connect endpoint{}:{}", endpoint.getHost(), endpoint.getPort());
-            int weight = endpoint.getWeight();
-            if (weight > 1) {
-                weight = weight + 1;
-            }
-            for (int i = 0; i < weight; i++) {
-                LOGGER.info("connected to endpoint:{}:{}", endpoint.getHost(), endpoint.getPort());
-                for (int j = 0; j < 8; j++) {
-                    channels[index] = bootstrap.connect(endpoint.getHost(), endpoint.getPort()).sync().channel();
-                    index++;
-                }
+            invokers[index] = new Invoker(endpoint, bootstrap.connect(endpoint.getHost(), endpoint.getPort()).sync().channel());
+            index++;
+            size = size + endpoint.getWeight();
+        }
+        weightInvokers = new Invoker[size];
+        int indexj = 0;
+        for (Invoker invoker : invokers) {
+            for (int i = 0; i < invoker.getWeight(); i++) {
+                weightInvokers[indexj] = invoker;
+                indexj++;
             }
         }
-        LOGGER.info("channel size:{}", channels.length);
+
+        LOGGER.info("channel size:{}", weightInvokers.length);
     }
 
     public void sendData(AgentRequest agentRequest, SimpleCallback<AgentResponse> callback) {
         callbackMap.put(agentRequest.getTraceId(), callback);
         LOGGER.info("Request-traceId:{} The time access sendData:{}", agentRequest.getTraceId(), System.currentTimeMillis());
-        int o1 = random.nextInt(channels.length);
-        Channel channel = channels[o1];
+        int o1 = random.nextInt(weightInvokers.length);
+        Channel channel = weightInvokers[o1].getChannel();
         channel.writeAndFlush(agentRequest);
     }
 

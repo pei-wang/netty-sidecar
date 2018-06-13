@@ -25,7 +25,6 @@ public class NettyServer {
     private Channel channel;
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
-    int ioThreadNum = 16;
     //内核为此套接口排队的最大连接个数，对于给定的监听套接口，内核要维护两个队列，未链接队列和已连接队列大小总和最大值
 
     int backlog = 1024;
@@ -35,12 +34,14 @@ public class NettyServer {
     //    int port = 10080;
     public void start() throws InterruptedException {
         LOGGER.info("begin to start rpc server");
-        bossGroup = new EpollEventLoopGroup();
-        workerGroup = new EpollEventLoopGroup(ioThreadNum);
+//        bossGroup = new EpollEventLoopGroup();
+//        workerGroup = new EpollEventLoopGroup();
+        bossGroup = new NioEventLoopGroup();
+        workerGroup = new NioEventLoopGroup();
 
         ServerBootstrap serverBootstrap = new ServerBootstrap();
         serverBootstrap.group(bossGroup, workerGroup)
-                .channel(EpollServerSocketChannel.class)
+                .channel(NioServerSocketChannel.class)
                 .option(ChannelOption.SO_BACKLOG, backlog)
                 //注意是childOption
                 .childOption(ChannelOption.SO_KEEPALIVE, true)
