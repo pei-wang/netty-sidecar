@@ -36,12 +36,12 @@ public class NettyServer {
         LOGGER.info("begin to start rpc server");
 //        bossGroup = new EpollEventLoopGroup();
 //        workerGroup = new EpollEventLoopGroup();
-        bossGroup = new NioEventLoopGroup();
-        workerGroup = new NioEventLoopGroup();
+        bossGroup = new EpollEventLoopGroup();
+        workerGroup = new EpollEventLoopGroup();
 
         ServerBootstrap serverBootstrap = new ServerBootstrap();
         serverBootstrap.group(bossGroup, workerGroup)
-                .channel(NioServerSocketChannel.class)
+                .channel(EpollServerSocketChannel.class)
                 .option(ChannelOption.SO_BACKLOG, backlog)
                 //注意是childOption
                 .childOption(ChannelOption.SO_KEEPALIVE, true)
