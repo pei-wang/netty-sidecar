@@ -56,7 +56,7 @@ public class NettyClient {
     }
 
     private void build() throws Exception {
-        EventLoopGroup workerGroup = new NioEventLoopGroup(8);
+        EventLoopGroup workerGroup = new NioEventLoopGroup();
         bootstrap = new Bootstrap();
         bootstrap.group(workerGroup)
                 .channel(NioSocketChannel.class)
